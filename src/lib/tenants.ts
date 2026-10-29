@@ -20,7 +20,6 @@ export async function createTenant(
   input: CreateTenantInput,
   ownerUserId: string
 ): Promise<Tenant> {
-  // Create tenant + branding + settings + owner membership in one transaction
   const clientResult = await query(
     `WITH new_tenant AS (
        INSERT INTO tenants (name, slug, country, currency, timezone)
@@ -105,6 +104,50 @@ export async function updateTenantBranding(
       data.accent_color ?? null,
       data.hero_title ?? null,
       data.hero_subtitle ?? null,
+    ]
+  );
+}
+
+export async function updateTenantSettings(
+  tenantId: string,
+  data: Partial<{
+    contact_email: string | null;
+    contact_phone: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    seo_title: string | null;
+    seo_description: string | null;
+    custom_domain: string | null;
+    published: boolean;
+  }>
+): Promise<TenantSettings | null> {
+  return queryOne<TenantSettings>(
+    `UPDATE tenant_settings
+     SET
+       contact_email = COALESCE($2, contact_email),
+       contact_phone = COALESCE($3, contact_phone),
+       address = COALESCE($4, address),
+       city = COALESCE($5, city),
+       state = COALESCE($6, state),
+       seo_title = COALESCE($7, seo_title),
+       seo_description = COALESCE($8, seo_description),
+       custom_domain = COALESCE($9, custom_domain),
+       published = COALESCE($10, published),
+       updated_at = now()
+     WHERE tenant_id = $1
+     RETURNING *`,
+    [
+      tenantId,
+      data.contact_email ?? null,
+      data.contact_phone ?? null,
+      data.address ?? null,
+      data.city ?? null,
+      data.state ?? null,
+      data.seo_title ?? null,
+      data.seo_description ?? null,
+      data.custom_domain ?? null,
+      data.published ?? null,
     ]
   );
 }
