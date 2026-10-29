@@ -12,19 +12,23 @@ One platform. Every real-estate business. Its own brand, listings, customers and
 | Area | Status |
 |------|--------|
 | Next.js 15 + TypeScript scaffold | Done |
-| Premium dashboard UI (emerald / gold) | Done (demo data) |
-| PostgreSQL connection helper + health endpoint | Done |
-| Version-controlled database schema | Done (migration 0001) |
-| Core domain types + validation | Done |
+| Premium dashboard UI (emerald / gold) | Done (still demo data in UI) |
+| PostgreSQL connection + health endpoint | Done |
+| Version-controlled database schema | Done (`0001_initial.sql`) |
+| Core domain types + Zod validation | Done |
 | Tenant authorization helpers | Done (foundation) |
+| Property data access layer + API | Done (tenant-scoped) |
+| Lead data access layer | Done (tenant-scoped) |
+| Dashboard metrics from DB | Done (ready to wire) |
+| Server actions for properties | Done |
 | Authentication | Not started |
-| Persistent property / lead / viewing CRUD | Not started |
+| Persistent UI wired to real data | Not started |
 | Multi-tenant isolation tests | Not started |
 | Tenant public websites | Not started |
 | Billing / subscriptions | Not started |
-| Vercel production deployment | Not started |
+| Vercel production deployment | Blocked (authorization) |
 
-This is **not** a production-ready SaaS yet. The foundation is now in place so we can implement features correctly.
+The data layer is now real and tenant-aware. The dashboard UI still shows demonstration numbers until a tenant exists and authentication is in place.
 
 ---
 
@@ -59,13 +63,14 @@ psql "$DATABASE_URL" -f db/migrations/0001_initial.sql
 npm run dev
 ```
 
-Health check: `http://localhost:3000/api/health`
+Health check: `http://localhost:3000/api/health`  
+(also reports whether the schema has been migrated)
 
 ---
 
 ## Database
 
-The initial migration (`db/migrations/0001_initial.sql`) creates:
+Migration `db/migrations/0001_initial.sql` creates:
 
 - `tenants`, `tenant_branding`, `tenant_settings`
 - `user_profiles`, `tenant_memberships`
@@ -73,15 +78,19 @@ The initial migration (`db/migrations/0001_initial.sql`) creates:
 - `leads`, `property_viewings`
 - `tenant_pages`, `subscriptions`, `audit_logs`, `platform_settings`
 
-All business tables are scoped by `tenant_id`. Authorization must still be enforced in application code (and later with RLS if desired).
+All business tables are scoped by `tenant_id`.
+
+### Temporary API note
+
+Until authentication is live, the `/api/properties` endpoints accept an `x-tenant-id` header for testing only. This will be removed. Client-supplied tenant IDs must never be trusted in production.
 
 ---
 
-## Roadmap (from Master PRD)
+## Roadmap
 
-1. **Foundation** (current) — schema, types, helpers, clean build
-2. **Authentication + tenant onboarding**
-3. **Property management (real CRUD)**
+1. **Foundation** — schema, types, data access ✅
+2. **Authentication + tenant onboarding** ← next
+3. **Wire dashboard + property UI to real data**
 4. **CRM + viewings**
 5. **Tenant websites & branding**
 6. **Team management & reporting**
