@@ -11,26 +11,26 @@
 .status-sold i{background:#9a5b5b}
 
 .lead-stage-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
-.lead-list{padding:4px 16px 12px}
-.lead-row{display:flex;align-items:center;gap:14px;padding:16px 4px;border-bottom:1px solid #edf0ec}
+.lead-list,.viewing-list{padding:4px 16px 12px}
+.lead-row,.viewing-row{display:flex;align-items:center;gap:14px;padding:16px 4px;border-bottom:1px solid #edf0ec}
 .lead-avatar{width:40px;height:40px;border-radius:50%;background:#e7f1e8;color:#2f6b4a;display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0}
-.lead-main{min-width:0;flex:1}
+.lead-main,.viewing-main{min-width:0;flex:1}
 .lead-title-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
 .lead-title-line h3{margin:0;font:700 13px Manrope,sans-serif}
 .lead-status{font-size:10px;font-weight:700;padding:4px 8px;border-radius:999px;background:#f0f2ef;color:#5f6b62}
-.status-new{background:#e8f3eb;color:#2f6b4a}
-.status-contacted{background:#f6ebdc;color:#9a713f}
+.status-new,.status-confirmed,.status-completed{background:#e8f3eb;color:#2f6b4a}
+.status-contacted,.status-requested{background:#f6ebdc;color:#9a713f}
 .status-qualified{background:#eef2f8;color:#4d6490}
 .status-viewing-scheduled{background:#e7f1e8;color:#2f6b4a}
 .status-negotiating{background:#f5eef3;color:#9c7892}
 .status-won{background:#e8f3eb;color:#1f6b45}
-.status-lost{background:#f3e9e9;color:#9a5b5b}
+.status-lost,.status-cancelled,.status-no-show{background:#f3e9e9;color:#9a5b5b}
 .lead-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:#879188;margin-top:3px}
 .lead-source{font-weight:700;color:#5f6b62}
 .lead-action{padding:8px 12px;font-size:11px}
 
 @media(max-width:700px){
-  .lead-row{align-items:flex-start;flex-wrap:wrap}
+  .lead-row,.viewing-row{align-items:flex-start;flex-wrap:wrap}
   .lead-action{width:100%}
   .prop-search{min-width:100%}
 }

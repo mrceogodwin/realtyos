@@ -25,7 +25,7 @@ const workspaceNav = [
   { label: "Overview", href: "/app", icon: LayoutDashboard },
   { label: "Properties", href: "/app/properties", icon: Building2 },
   { label: "Leads & clients", href: "/app/leads", icon: Users },
-  { label: "Viewings", href: "/app/viewings", icon: CalendarDays, soon: true },
+  { label: "Viewings", href: "/app/viewings", icon: CalendarDays },
   { label: "Messages", href: "/app/messages", icon: MessageSquare, soon: true },
 ];
 
