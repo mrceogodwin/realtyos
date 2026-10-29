@@ -30,8 +30,8 @@ const workspaceNav = [
 ];
 
 const manageNav = [
-  { label: "Website & brand", href: "/app/branding", icon: Compass, soon: true },
-  { label: "Team members", href: "/app/team", icon: ShieldCheck, soon: true },
+  { label: "Website & brand", href: "/app/branding", icon: Compass },
+  { label: "Team members", href: "/app/team", icon: ShieldCheck },
   { label: "Reports", href: "/app/reports", icon: FileText, soon: true },
 ];
 
