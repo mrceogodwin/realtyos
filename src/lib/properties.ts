@@ -45,6 +45,17 @@ export async function listProperties(options: PropertyListOptions): Promise<Prop
   );
 }
 
+export async function listPublishedProperties(
+  tenantId: string,
+  limit = 12
+): Promise<Property[]> {
+  return listProperties({
+    tenantId,
+    status: "published",
+    limit,
+  });
+}
+
 export async function getPropertyById(
   tenantId: string,
   propertyId: string

@@ -3,6 +3,7 @@
 import { Building2, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { createWorkspaceAction } from "@/app/actions/workspace";
 
 const steps = [
   "Create your account",
@@ -15,12 +16,41 @@ const steps = [
 export default function OnboardingPage() {
   const [companyName, setCompanyName] = useState("");
   const [slug, setSlug] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
 
   function handleCompanyChange(value: string) {
     setCompanyName(value);
     if (!slug || slug === slugify(companyName)) {
       setSlug(slugify(value));
     }
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setPending(true);
+    setError("");
+    setMessage("");
+
+    const result = await createWorkspaceAction({
+      name: companyName,
+      slug,
+      country: "NG",
+      currency: "NGN",
+      timezone: "Africa/Lagos",
+    });
+
+    setPending(false);
+
+    if (result.ok) {
+      setMessage(
+        `Workspace "${result.data && typeof result.data === "object" && "name" in result.data ? (result.data as { name: string }).name : companyName}" is ready. Open /app to continue.`
+      );
+      return;
+    }
+
+    setError(result.error);
   }
 
   return (
@@ -40,8 +70,8 @@ export default function OnboardingPage() {
 
         <h1>Set up your workspace</h1>
         <p className="auth-subtitle">
-          Onboarding will create a tenant, branding, and your owner membership.
-          Full account creation activates once authentication is live.
+          This creates a tenant, default branding, settings, and your owner
+          membership — once auth and the database are connected.
         </p>
 
         <ol className="onboarding-steps">
@@ -55,15 +85,7 @@ export default function OnboardingPage() {
           ))}
         </ol>
 
-        <form
-          className="auth-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            alert(
-              "Workspace creation is ready in the data layer. Connect DATABASE_URL + Auth to activate it."
-            );
-          }}
-        >
+        <form className="auth-form" onSubmit={onSubmit}>
           <label>
             Company name
             <input
@@ -76,7 +98,7 @@ export default function OnboardingPage() {
           <label>
             Workspace URL
             <div className="slug-field">
-              <span>realtyos.app/</span>
+              <span>realtyos.app/s/</span>
               <input
                 required
                 value={slug}
@@ -85,8 +107,16 @@ export default function OnboardingPage() {
               />
             </div>
           </label>
-          <button type="submit" className="primary-button auth-submit">
-            Continue setup
+
+          {error && <p className="form-error">{error}</p>}
+          {message && <p className="form-success">{message}</p>}
+
+          <button
+            type="submit"
+            className="primary-button auth-submit"
+            disabled={pending}
+          >
+            {pending ? "Creating…" : "Continue setup"}
           </button>
         </form>
 
