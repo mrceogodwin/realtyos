@@ -1,0 +1,36 @@
+/* Shared workspace list / CRM chrome */
+.prop-toolbar-rich{gap:12px;flex-wrap:wrap}
+.prop-search{display:flex;align-items:center;gap:8px;min-width:220px;flex:1;height:36px;border:1px solid #e7ebe6;border-radius:8px;padding:0 10px;background:#fff;color:#a2aaa4}
+.prop-search input{border:0;outline:none;width:100%;background:transparent;color:var(--ink);font-size:12px}
+.prop-filters{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid #e7ebe6;background:#fff;color:#6b766f;border-radius:999px;padding:6px 11px;font-size:11px;font-weight:600}
+.chip-active{background:var(--green-soft);border-color:#c9ddd0;color:var(--green)}
+.status-offer{background:#eef2f8;color:#4d6490}
+.status-offer i{background:#4d6490}
+.status-sold{background:#f3e9e9;color:#9a5b5b}
+.status-sold i{background:#9a5b5b}
+
+.lead-stage-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.lead-list{padding:4px 16px 12px}
+.lead-row{display:flex;align-items:center;gap:14px;padding:16px 4px;border-bottom:1px solid #edf0ec}
+.lead-avatar{width:40px;height:40px;border-radius:50%;background:#e7f1e8;color:#2f6b4a;display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0}
+.lead-main{min-width:0;flex:1}
+.lead-title-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.lead-title-line h3{margin:0;font:700 13px Manrope,sans-serif}
+.lead-status{font-size:10px;font-weight:700;padding:4px 8px;border-radius:999px;background:#f0f2ef;color:#5f6b62}
+.status-new{background:#e8f3eb;color:#2f6b4a}
+.status-contacted{background:#f6ebdc;color:#9a713f}
+.status-qualified{background:#eef2f8;color:#4d6490}
+.status-viewing-scheduled{background:#e7f1e8;color:#2f6b4a}
+.status-negotiating{background:#f5eef3;color:#9c7892}
+.status-won{background:#e8f3eb;color:#1f6b45}
+.status-lost{background:#f3e9e9;color:#9a5b5b}
+.lead-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:#879188;margin-top:3px}
+.lead-source{font-weight:700;color:#5f6b62}
+.lead-action{padding:8px 12px;font-size:11px}
+
+@media(max-width:700px){
+  .lead-row{align-items:flex-start;flex-wrap:wrap}
+  .lead-action{width:100%}
+  .prop-search{min-width:100%}
+}
