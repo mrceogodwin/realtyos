@@ -3,6 +3,7 @@ import { Building2, MapPin, ArrowRight } from "lucide-react";
 import { getTenantBySlug, getTenantBranding, getTenantSettings } from "@/lib/tenants";
 import { listPublishedProperties } from "@/lib/properties";
 import { DatabaseNotConfiguredError } from "@/lib/db";
+import { PublicEnquiryForm } from "@/components/public-enquiry-form";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -30,7 +31,6 @@ export default async function PublicTenantSitePage({ params }: Props) {
     }
   }
 
-  // Demo fallback when DB is offline or slug not found — shows the shell design
   const name = tenant?.name ?? formatSlug(slug);
   const primary = branding?.primary_color ?? "#12634b";
   const accent = branding?.accent_color ?? "#c6a36b";
@@ -43,7 +43,13 @@ export default async function PublicTenantSitePage({ params }: Props) {
     settings?.seo_description ?? `${name} on RealtyOS.`;
 
   return (
-    <div className="public-site" style={{ ["--tenant-primary" as string]: primary, ["--tenant-accent" as string]: accent }}>
+    <div
+      className="public-site"
+      style={{
+        ["--tenant-primary" as string]: primary,
+        ["--tenant-accent" as string]: accent,
+      }}
+    >
       <header className="pub-nav">
         <div className="pub-nav-inner">
           <div className="pub-brand">
@@ -101,7 +107,11 @@ export default async function PublicTenantSitePage({ params }: Props) {
           ) : (
             <div className="pub-grid">
               {properties.map((p) => (
-                <article key={p.id} className="pub-card">
+                <Link
+                  key={p.id}
+                  href={`/s/${slug}/${p.slug}`}
+                  className="pub-card"
+                >
                   <div className="pub-card-visual" />
                   <div className="pub-card-body">
                     <h3>{p.title}</h3>
@@ -114,7 +124,7 @@ export default async function PublicTenantSitePage({ params }: Props) {
                       {p.price_period ? ` / ${p.price_period}` : ""}
                     </div>
                   </div>
-                </article>
+                </Link>
               ))}
             </div>
           )}
@@ -129,9 +139,9 @@ export default async function PublicTenantSitePage({ params }: Props) {
             {settings?.contact_email ? ` · ${settings.contact_email}` : ""}
             {settings?.contact_phone ? ` · ${settings.contact_phone}` : ""}
           </p>
-          <p className="pub-note">
-            Public enquiry forms will post into the tenant’s lead pipeline.
-          </p>
+          <div className="pub-contact-form-wrap">
+            <PublicEnquiryForm workspaceSlug={slug} />
+          </div>
         </div>
       </section>
 
