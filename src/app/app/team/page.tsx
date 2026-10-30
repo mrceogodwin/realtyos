@@ -1,179 +1,80 @@
-"use client";
-
-import { useState } from "react";
-import { Plus, ShieldCheck, X } from "lucide-react";
+import { redirect } from "next/navigation";
+import { ShieldCheck, Users } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { getCurrentAuthContext } from "@/lib/auth";
+import { DatabaseNotConfiguredError, queryMany } from "@/lib/db";
 
-type Member = {
+type TeamMember = {
   id: string;
-  name: string;
+  full_name: string | null;
   email: string;
-  role: "Owner" | "Admin" | "Agent" | "Editor" | "Viewer";
-  status: "Active" | "Invited" | "Suspended";
+  role: "owner" | "admin" | "agent" | "editor" | "viewer";
+  status: "active" | "invited" | "suspended" | "revoked";
 };
 
-const demoMembers: Member[] = [
-  {
-    id: "1",
-    name: "Godwin O.",
-    email: "godwin@gbest.example",
-    role: "Owner",
-    status: "Active",
-  },
-  {
-    id: "2",
-    name: "Amaka Kingsley",
-    email: "amaka@gbest.example",
-    role: "Agent",
-    status: "Active",
-  },
-  {
-    id: "3",
-    name: "Tunde Okonkwo",
-    email: "tunde@gbest.example",
-    role: "Admin",
-    status: "Active",
-  },
-  {
-    id: "4",
-    name: "Efe Oghene",
-    email: "efe@gbest.example",
-    role: "Agent",
-    status: "Invited",
-  },
-];
+export default async function TeamPage() {
+  const context = await getCurrentAuthContext();
+  if (!context) redirect("/login");
+  if (!context.tenant || !context.membership) redirect("/onboarding");
 
-export default function TeamPage() {
-  const [notice, setNotice] = useState("");
-  const [showInvite, setShowInvite] = useState(false);
+  const canManage = ["owner", "admin"].includes(context.membership.role);
+  let members: TeamMember[] = [];
+  let databaseUnavailable = false;
+  try {
+    members = await queryMany<TeamMember>(
+      `SELECT m.id, u.full_name, u.email, m.role, m.status
+         FROM tenant_memberships m
+         JOIN user_profiles u ON u.id = m.user_id
+        WHERE m.tenant_id = $1
+        ORDER BY CASE m.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 WHEN 'agent' THEN 3 WHEN 'editor' THEN 4 ELSE 5 END,
+                 CASE m.status WHEN 'active' THEN 1 WHEN 'invited' THEN 2 ELSE 3 END,
+                 u.full_name NULLS LAST, u.email`,
+      [context.tenant.id]
+    );
+  } catch (error) {
+    if (error instanceof DatabaseNotConfiguredError) databaseUnavailable = true;
+    else throw error;
+  }
 
   return (
-    <AppShell
-      title="Team members"
-      subtitle="Roles and invitations for this workspace. Demo roster until memberships are live."
-      actions={
-        <button className="primary-button" onClick={() => setShowInvite(true)}>
-          <Plus size={17} /> Invite member
-        </button>
-      }
-    >
-      {notice && (
-        <div className="notice-banner">
-          <ShieldCheck size={17} />
-          <span>{notice}</span>
-          <button aria-label="Dismiss" onClick={() => setNotice("")}>
-            <X size={16} />
-          </button>
-        </div>
-      )}
-
+    <AppShell title="Team members" subtitle={`People and access in ${context.tenant.name}.`}>
       <section className="panel">
         <div className="panel-heading">
-          <div>
-            <h2>Workspace team</h2>
-            <p>Owners, admins, agents and editors with server-side roles.</p>
+          <div><h2>Workspace team</h2><p>Memberships and access roles from the database.</p></div>
+          <span className="lead-source">{members.length} members</span>
+        </div>
+        {databaseUnavailable ? (
+          <p className="empty-state">Connect DATABASE_URL and apply migrations to load workspace memberships.</p>
+        ) : members.length === 0 ? (
+          <p className="empty-state">No workspace memberships were found.</p>
+        ) : (
+          <div className="team-list">
+            {members.map((member) => {
+              const displayName = member.full_name || member.email;
+              const initials = displayName.split(/\\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+              return (
+                <article key={member.id} className="team-row">
+                  <div className="lead-avatar">{initials || "U"}</div>
+                  <div className="lead-main">
+                    <div className="lead-title-line">
+                      <h3>{displayName}</h3>
+                      <span className={"lead-status status-" + member.status}>{member.status}</span>
+                    </div>
+                    <div className="lead-meta"><span>{member.email}</span><span>·</span><span className="lead-source">{member.role}</span></div>
+                  </div>
+                  {member.role === "owner" && <ShieldCheck size={18} aria-label="Workspace owner" />}
+                </article>
+              );
+            })}
           </div>
-        </div>
-        <div className="team-list">
-          {demoMembers.map((m) => (
-            <article key={m.id} className="team-row">
-              <div className="lead-avatar">
-                {m.name
-                  .split(" ")
-                  .map((p) => p[0])
-                  .slice(0, 2)
-                  .join("")}
-              </div>
-              <div className="lead-main">
-                <div className="lead-title-line">
-                  <h3>{m.name}</h3>
-                  <span className={"lead-status status-" + m.status.toLowerCase()}>
-                    {m.status}
-                  </span>
-                </div>
-                <div className="lead-meta">
-                  <span>{m.email}</span>
-                  <span>·</span>
-                  <span className="lead-source">{m.role}</span>
-                </div>
-              </div>
-              {m.role !== "Owner" && (
-                <button
-                  className="secondary-button lead-action"
-                  onClick={() =>
-                    setNotice(
-                      "Role and status changes will use the memberships repository."
-                    )
-                  }
-                >
-                  Manage
-                </button>
-              )}
-            </article>
-          ))}
-        </div>
+        )}
       </section>
-
-      {showInvite && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setShowInvite(false);
-          }}
-        >
-          <section className="modal" role="dialog" aria-modal="true">
-            <div className="modal-head">
-              <div>
-                <span className="modal-eyebrow">TEAM</span>
-                <h2>Invite a member</h2>
-                <p>They join only this workspace, with the role you assign.</p>
-              </div>
-              <button
-                className="icon-button"
-                aria-label="Close"
-                onClick={() => setShowInvite(false)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setShowInvite(false);
-                setNotice(
-                  "Invite flow is ready in memberships.ts. Auth + email delivery come next."
-                );
-              }}
-            >
-              <label>
-                Email
-                <input required type="email" placeholder="agent@agency.com" />
-              </label>
-              <label>
-                Role
-                <select defaultValue="agent">
-                  <option value="admin">Admin</option>
-                  <option value="agent">Agent</option>
-                  <option value="editor">Editor</option>
-                  <option value="viewer">Viewer</option>
-                </select>
-              </label>
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => setShowInvite(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="primary-button">
-                  Send invite
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
+      {!canManage && <p className="empty-state"><Users size={16} /> You have view access to the team. Workspace admins manage invitations and roles.</p>}
+      {canManage && (
+        <section className="panel">
+          <div className="panel-heading"><div><h2>Invitations</h2><p>Secure invitation creation and email delivery are not enabled yet.</p></div></div>
+          <p className="empty-state">No fake invites are shown or sent. Invitation tokens and email delivery are the next implementation step.</p>
+        </section>
       )}
     </AppShell>
   );
