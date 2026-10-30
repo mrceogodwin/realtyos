@@ -55,7 +55,7 @@ export async function listViewings(
   return queryMany<PropertyViewing>(
     `SELECT * FROM property_viewings
      WHERE ${where}
-     ORDER BY scheduled_at ASC
+     ORDER BY CASE WHEN scheduled_at >= now() THEN 0 ELSE 1 END,\n              CASE WHEN scheduled_at >= now() THEN scheduled_at END ASC,\n              CASE WHEN scheduled_at < now() THEN scheduled_at END DESC
      LIMIT $${idx} OFFSET $${idx + 1}`,
     params
   );
