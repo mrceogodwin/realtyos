@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useWorkspaceIdentity } from "@/components/workspace-provider";
 import {
   Building2,
   CalendarDays,
@@ -48,6 +49,9 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const [mobileMenu, setMobileMenu] = useState(false);
+  const workspace = useWorkspaceIdentity();
+  const workspaceInitial = workspace.workspaceName.trim().charAt(0).toUpperCase() || "W";
+  const userInitials = workspace.userName.trim().split(/\\s+/).slice(0, 2).map((part) => part.charAt(0)).join("").toUpperCase() || "U";
 
   function isActive(href: string) {
     if (href === "/app") return pathname === "/app";
@@ -84,7 +88,7 @@ export function AppShell({
         </div>
 
         <button className="workspace-switcher">
-          <div className="workspace-avatar">R</div>
+          <div className="workspace-avatar">{workspaceInitial}</div>
           <div className="workspace-copy">
             <strong>Your workspace</strong>
             <span>Active workspace</span>
@@ -128,7 +132,7 @@ export function AppShell({
           ))}
         </nav>
 
-        <div className="sidebar-spacer" />
+        {workspace.isSuperAdmin && (\n          <><div className="side-section-label management-label">PLATFORM</div><nav className="side-nav" aria-label="Platform navigation"><Link href="/admin" onClick={() => setMobileMenu(false)} className={"nav-item " + (isActive("/admin") ? "nav-active" : "")}><ShieldCheck size={18} strokeWidth={1.8} /><span>Super admin</span></Link></nav></>\n        )}\n\n        <div className="sidebar-spacer" />
 
         <div className="upgrade-card">
           <div className="upgrade-icon">
@@ -173,7 +177,7 @@ export function AppShell({
             </div>
           </div>
           <div className="topbar-actions">
-            <div className="top-avatar">RO</div>
+            <div className="top-avatar">{userInitials}</div>
           </div>
         </header>
 
