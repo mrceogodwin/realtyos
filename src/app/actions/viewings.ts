@@ -36,7 +36,7 @@ export async function createViewingAction(
   }
 
   try {
-    const viewing = await insertViewing(scope.tenant.id, parsed.data);
+    const viewing = await insertViewing(scope.tenant.id, parsed.data, scope.user.id);
     revalidatePath("/app/viewings");
     revalidatePath("/app");
     return { ok: true, data: viewing };
