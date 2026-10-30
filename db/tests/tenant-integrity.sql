@@ -61,5 +61,51 @@ BEGIN
     NULL;
   END;
 
+
+  -- A lead cannot be assigned to an agent from another tenant.
+  BEGIN
+    INSERT INTO leads (tenant_id, assigned_agent_id, full_name)
+    VALUES (tenant_a, user_b, 'Invalid agent assignment');
+    RAISE EXCEPTION 'Tenant isolation failure: foreign workspace lead agent was accepted';
+  EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+  END;
+
+  -- A viewing cannot link a lead from another tenant.
+  BEGIN
+    INSERT INTO property_viewings (tenant_id, property_id, lead_id, visitor_name, scheduled_at)
+    VALUES (tenant_b, property_a, lead_a, 'Cross-tenant lead visitor', now() + interval '1 day');
+    RAISE EXCEPTION 'Tenant isolation failure: cross-tenant viewing/lead reference was accepted';
+  EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+  END;
+
+  -- A viewing cannot be assigned to an agent outside its tenant.
+  BEGIN
+    INSERT INTO property_viewings (tenant_id, property_id, agent_id, visitor_name, scheduled_at)
+    VALUES (tenant_a, property_a, user_b, 'Foreign agent viewing', now() + interval '1 day');
+    RAISE EXCEPTION 'Tenant isolation failure: foreign workspace viewing agent was accepted';
+  EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+  END;
+
+  -- Creator references must also be members of the record's tenant.
+  BEGIN
+    INSERT INTO properties (tenant_id, title, slug, price, created_by)
+    VALUES (tenant_a, 'Foreign creator', 'foreign-creator', 1000000, user_b);
+    RAISE EXCEPTION 'Tenant isolation failure: foreign workspace property creator was accepted';
+  EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+  END;
+
+  -- Saved-property records cannot claim another tenant's property.
+  BEGIN
+    INSERT INTO saved_properties (tenant_id, user_id, property_id)
+    VALUES (tenant_b, user_b, property_a);
+    RAISE EXCEPTION 'Tenant isolation failure: cross-tenant saved property was accepted';
+  EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+  END;
+
   RAISE NOTICE 'Tenant integrity checks passed for isolated workspaces % and %', tenant_a, tenant_b;
 END $$;
