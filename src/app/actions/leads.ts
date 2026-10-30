@@ -5,6 +5,8 @@ import { createLeadSchema } from "@/lib/validation";
 import { createLead as insertLead, updateLeadStatus } from "@/lib/leads";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import type { LeadStatus } from "@/lib/types";
+import { getCurrentAuthContext, requireTenant } from "@/lib/auth";
+import { hasMinimumRole } from "@/lib/tenant";
 
 export type ActionResult<
   T = unknown
@@ -16,9 +18,11 @@ export async function createLeadAction(
   raw: unknown,
   tenantId: string
 ): Promise<ActionResult> {
-  if (!tenantId || typeof tenantId !== "string") {
-    return { ok: false, error: "Tenant context is required", code: "NO_TENANT" };
-  }
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
+  let scope;
+  try { scope = requireTenant(context); } catch { return { ok: false, error: "Active workspace required", code: "NO_TENANT" }; }
+  if (!hasMinimumRole(scope.membership, "agent")) return { ok: false, error: "Insufficient permissions", code: "FORBIDDEN" };
 
   const parsed = createLeadSchema.safeParse(raw);
   if (!parsed.success) {
@@ -30,7 +34,7 @@ export async function createLeadAction(
   }
 
   try {
-    const lead = await insertLead(tenantId, parsed.data);
+    const lead = await insertLead(scope.tenant.id, parsed.data);
     revalidatePath("/app/leads");
     revalidatePath("/app");
     return { ok: true, data: lead };
@@ -52,12 +56,14 @@ export async function updateLeadStatusAction(
   leadId: string,
   status: LeadStatus
 ): Promise<ActionResult> {
-  if (!tenantId || !leadId) {
-    return { ok: false, error: "Tenant and lead are required", code: "NO_CONTEXT" };
-  }
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
+  let scope;
+  try { scope = requireTenant(context); } catch { return { ok: false, error: "Active workspace required", code: "NO_TENANT" }; }
+  if (!hasMinimumRole(scope.membership, "agent")) return { ok: false, error: "Insufficient permissions", code: "FORBIDDEN" };
 
   try {
-    const lead = await updateLeadStatus(tenantId, leadId, status);
+    const lead = await updateLeadStatus(scope.tenant.id, leadId, status);
     if (!lead) {
       return { ok: false, error: "Lead not found in this workspace", code: "NOT_FOUND" };
     }
