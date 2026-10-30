@@ -1,10 +1,6 @@
 -- Additional tenant-scoped foreign keys for secondary records and assignments.
+-- Assigned-agent membership integrity is already enforced by migration 0002.
 BEGIN;
-
-ALTER TABLE leads
-  ADD CONSTRAINT leads_assigned_agent_membership_fk
-  FOREIGN KEY (tenant_id, assigned_agent_id)
-  REFERENCES tenant_memberships (tenant_id, user_id);
 
 ALTER TABLE properties
   ADD CONSTRAINT properties_creator_membership_fk
