@@ -7,7 +7,7 @@ if (!connectionString) {
   process.exit(1);
 }
 
-const isLocal = /localhost|127\\.0\\.1/.test(connectionString);
+const isLocal = /localhost|127\.0\.0\.1/.test(connectionString);
 const client = new Client({
   connectionString,
   ssl: isLocal ? undefined : { rejectUnauthorized: true },
