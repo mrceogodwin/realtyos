@@ -113,19 +113,17 @@ export function AppShell({
 
         <div className="side-section-label management-label">MANAGE</div>
         <nav className="side-nav" aria-label="Management navigation">
-          {manageNav.map(({ label, href, icon: Icon, soon }) => (
+          {manageNav.map(({ label, href, icon: Icon }) => (
             <Link
               key={href}
-              href={soon ? "#" : href}
+              href={href}
               onClick={(e) => {
-                if (soon) e.preventDefault();
                 setMobileMenu(false);
               }}
               className={"nav-item " + (isActive(href) ? "nav-active" : "")}
             >
               <Icon size={18} strokeWidth={1.8} />
               <span>{label}</span>
-              {soon && <span className="nav-count">Soon</span>}
             </Link>
           ))}
         </nav>

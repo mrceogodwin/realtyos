@@ -4,6 +4,7 @@ import { createPropertySchema } from "@/lib/validation";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import { getCurrentAuthContext, requireTenant } from "@/lib/auth";
 import { hasMinimumRole } from "@/lib/tenant";
+import type { PropertyStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -27,13 +28,13 @@ export async function GET(req: NextRequest) {
   const rawOffset = Number(searchParams.get("offset") ?? 0);
   const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(1, rawLimit), 100) : 50;
   const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset) : 0;
-  const allowedStatuses = ["draft","published","under_offer","sold","rented","archived"] as const;
+  const allowedStatuses: readonly PropertyStatus[] = ["draft","published","under_offer","sold","rented","archived"];
   const requestedStatus = searchParams.get("status");
   if (requestedStatus && !allowedStatuses.includes(requestedStatus as typeof allowedStatuses[number])) {
     return NextResponse.json({ error: "Invalid status filter" }, { status: 400 });
   }
   try {
-    const properties = await listProperties({ tenantId: scope.tenantId, search, status: requestedStatus || undefined, limit, offset });
+    const properties = await listProperties({ tenantId: scope.tenantId, search, status: requestedStatus ? (requestedStatus as PropertyStatus) : undefined, limit, offset });
     return NextResponse.json({ data: properties });
   } catch (err) {
     if (err instanceof DatabaseNotConfiguredError) return NextResponse.json({ error: "Database not configured", code: "DB_NOT_CONFIGURED" }, { status: 503 });
