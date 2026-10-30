@@ -51,7 +51,7 @@ export function AppShell({
   const [mobileMenu, setMobileMenu] = useState(false);
   const workspace = useWorkspaceIdentity();
   const workspaceInitial = workspace.workspaceName.trim().charAt(0).toUpperCase() || "W";
-  const userInitials = workspace.userName.trim().split(/\\s+/).slice(0, 2).map((part) => part.charAt(0)).join("").toUpperCase() || "U";
+  const userInitials = workspace.userName.trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0)).join("").toUpperCase() || "U";
 
   function isActive(href: string) {
     if (href === "/app") return pathname === "/app";
