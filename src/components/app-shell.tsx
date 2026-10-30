@@ -90,8 +90,8 @@ export function AppShell({
         <button className="workspace-switcher">
           <div className="workspace-avatar">{workspaceInitial}</div>
           <div className="workspace-copy">
-            <strong>Your workspace</strong>
-            <span>Active workspace</span>
+            <strong>{workspace.workspaceName}</strong>
+            <span>{workspace.role}</span>
           </div>
           <ChevronDown size={16} className="muted-icon" />
         </button>
@@ -148,7 +148,8 @@ export function AppShell({
           </>
         )}
 
-\n        <div className="sidebar-spacer" />
+
+        <div className="sidebar-spacer" />
 
         <div className="upgrade-card">
           <div className="upgrade-icon">
@@ -167,10 +168,10 @@ export function AppShell({
         </Link>
 
         <div className="profile-row">
-          <div className="profile-avatar">RO</div>
+          <div className="profile-avatar">{userInitials}</div>
           <div className="profile-copy">
-            <strong>Your account</strong>
-            <span>Signed in</span>
+            <strong>{workspace.userName}</strong>
+            <span>{workspace.userEmail}</span>
           </div>
           <MoreHorizontal size={19} className="muted-icon" />
         </div>
