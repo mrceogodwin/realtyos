@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { updateTenantBranding, updateTenantSettings } from "@/lib/tenants";
 import { DatabaseNotConfiguredError } from "@/lib/db";
+import { getCurrentAuthContext, requireTenant } from "@/lib/auth";
+import { hasMinimumRole } from "@/lib/tenant";
 
 export type ActionResult<
   T = unknown
@@ -26,9 +28,11 @@ export async function saveBrandingAction(
   raw: unknown,
   tenantId: string
 ): Promise<ActionResult> {
-  if (!tenantId || typeof tenantId !== "string") {
-    return { ok: false, error: "Tenant context is required", code: "NO_TENANT" };
-  }
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
+  let scope;
+  try { scope = requireTenant(context); } catch { return { ok: false, error: "Active workspace required", code: "NO_TENANT" }; }
+  if (!hasMinimumRole(scope.membership, "admin")) return { ok: false, error: "Insufficient permissions", code: "FORBIDDEN" };
 
   const parsed = brandingSchema.safeParse(raw);
   if (!parsed.success) {
@@ -51,7 +55,7 @@ export async function saveBrandingAction(
       custom_domain,
     } = parsed.data;
 
-    const branding = await updateTenantBranding(tenantId, {
+    const branding = await updateTenantBranding(scope.tenant.id, {
       primary_color,
       secondary_color,
       accent_color,
@@ -59,7 +63,7 @@ export async function saveBrandingAction(
       hero_subtitle,
     });
 
-    const settings = await updateTenantSettings(tenantId, {
+    const settings = await updateTenantSettings(scope.tenant.id, {
       seo_title,
       seo_description,
       custom_domain,
