@@ -1,13 +1,16 @@
 import NextAuth from "next-auth";
+import Google from "next-auth/providers/google";
 import { authConfig } from "./auth.config";
 
-/**
- * Auth.js (NextAuth v5) instance.
- * Credentials / OAuth providers and the Postgres adapter will be added
- * once AUTH_SECRET and a working DATABASE_URL are configured.
- */
+const providers =
+  process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
+    ? [Google({
+        clientId: process.env.AUTH_GOOGLE_ID,
+        clientSecret: process.env.AUTH_GOOGLE_SECRET,
+      })]
+    : [];
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  // providers will be registered here
-  // adapter will be registered here when using database sessions
+  providers,
 });
