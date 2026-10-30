@@ -18,13 +18,12 @@ const client = new Client({
 async function main() {
   await client.connect();
   await client.query("SELECT pg_advisory_lock(824731905)");
-  await client.query(\`
-    CREATE TABLE IF NOT EXISTS schema_migrations (
-      version TEXT PRIMARY KEY,
-      checksum TEXT NOT NULL,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    )
-  \`);
+  await client.query(
+    "CREATE TABLE IF NOT EXISTS schema_migrations (" +
+    "version TEXT PRIMARY KEY, " +
+    "checksum TEXT NOT NULL, " +
+    "applied_at TIMESTAMPTZ NOT NULL DEFAULT now())"
+  );
 
   const directory = join(process.cwd(), "db", "migrations");
   const files = (await readdir(directory))
@@ -41,17 +40,17 @@ async function main() {
 
     if (existing.rowCount) {
       if (existing.rows[0].checksum !== checksum) {
-        throw new Error(\`Applied migration was modified: \${file}\`);
+        throw new Error("Applied migration was modified: " + file);
       }
-      console.log(\`Already applied: \${file}\`);
+      console.log("Already applied: " + file);
       continue;
     }
 
     const sql = source
       .replace(/^\s*BEGIN\s*;?/im, "")
-      .replace(/COMMIT\s*;?\s*$/i, "");
+      .replace(/COMMIT\s*;?\s*$/im, "");
 
-    console.log(\`Applying: \${file}\`);
+    console.log("Applying: " + file);
     await client.query("BEGIN");
     try {
       await client.query(sql);
@@ -60,7 +59,7 @@ async function main() {
         [file, checksum]
       );
       await client.query("COMMIT");
-      console.log(\`Applied: \${file}\`);
+      console.log("Applied: " + file);
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
