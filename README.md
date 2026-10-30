@@ -1,115 +1,121 @@
 # RealtyOS
 
 **Multi-tenant, white-label real-estate SaaS platform**  
-Primary market: Nigeria (architecture ready for international expansion)
+Primary market: Nigeria, designed for international expansion.
 
-One platform. Every real-estate business. Its own brand, listings, customers and operations.
+One platform. Every real-estate business gets its own workspace, brand, property inventory, customers and operations.
 
----
-
-## Current Status (honest)
+## Current implementation status
 
 | Area | Status |
-|------|--------|
-| Next.js 15 + TypeScript scaffold | Done |
-| Premium dashboard UI (emerald / gold) | Done (still demo data in UI) |
-| PostgreSQL connection + health endpoint | Done |
-| Version-controlled database schema | Done (`0001_initial.sql`) |
-| Core domain types + Zod validation | Done |
-| Tenant authorization helpers | Done (foundation) |
-| Property data access layer + API | Done (tenant-scoped) |
-| Lead data access layer | Done (tenant-scoped) |
-| Dashboard metrics from DB | Done (ready to wire) |
-| Server actions for properties | Done |
-| Authentication | Not started |
-| Persistent UI wired to real data | Not started |
-| Multi-tenant isolation tests | Not started |
-| Tenant public websites | Not started |
-| Billing / subscriptions | Not started |
-| Vercel production deployment | Blocked (authorization) |
+|---|---|
+| Next.js 15 / React 19 / TypeScript foundation | Implemented |
+| PostgreSQL schema and tenant data layer | Implemented; live database migration not yet verified |
+| Tenant-scoped property, lead and viewing actions | Foundation implemented; end-to-end testing pending |
+| Google OAuth | Configurable; requires Google credentials and runtime verification |
+| Session-backed user and tenant context | Implemented; runtime verification pending |
+| Workspace onboarding | Implemented; requires configured auth and database |
+| Dashboard metrics | Tenant-scoped database queries implemented |
+| Super-admin overview | Read-only overview implemented |
+| First super-admin bootstrap | Secure CLI command implemented |
+| Repeatable database migration runner | Implemented; not yet run against production database |
+| Public tenant websites and custom-domain routing | Incomplete |
+| Media uploads / object storage | Incomplete |
+| Billing, Paystack / Flutterwave | Incomplete |
+| Production deployment and end-to-end verification | Not yet confirmed |
 
-The data layer is now real and tenant-aware. The dashboard UI still shows demonstration numbers until a tenant exists and authentication is in place.
-
----
+Do not treat a code feature as production-ready until it has passed runtime and tenant-isolation tests against a configured database.
 
 ## Stack
 
-- **Frontend**: Next.js 15 (App Router), React 19, TypeScript
-- **Database**: Neon PostgreSQL
-- **Hosting**: Vercel
-- **Validation**: Zod
-- **Icons**: Lucide React
+- Next.js App Router, React and TypeScript
+- Neon PostgreSQL (\`pg\`)
+- Vercel deployment target
+- Auth.js / Google OAuth
+- Zod validation
+- Lucide React
 
----
+## Local setup
 
-## Getting Started
+1. Clone and install:
 
-```bash
-# 1. Clone
-git clone https://github.com/mrceogodwin/realtyos.git
-cd realtyos
+   \`\`\`bash
+   git clone https://github.com/mrceogodwin/realtyos.git
+   cd realtyos
+   npm install
+   \`\`\`
 
-# 2. Install
-npm install
+2. Create your environment file:
 
-# 3. Environment
-cp .env.example .env.local
-# Edit DATABASE_URL with your Neon connection string
+   \`\`\`bash
+   cp .env.example .env.local
+   \`\`\`
 
-# 4. Apply schema (once)
-psql "$DATABASE_URL" -f db/migrations/0001_initial.sql
+3. Configure at minimum:
+   - \`DATABASE_URL\` — PostgreSQL connection string
+   - \`AUTH_SECRET\` — long, random Auth.js secret
+   - \`AUTH_GOOGLE_ID\` and \`AUTH_GOOGLE_SECRET\` — Google OAuth credentials
 
-# 5. Run
-npm run dev
-```
+   Configure the Google OAuth authorized redirect URI for your local and deployed Auth.js callback endpoints. Keep all secrets server-side; never commit \`.env.local\`.
 
-Health check: `http://localhost:3000/api/health`  
-(also reports whether the schema has been migrated)
+4. Apply database migrations:
 
----
+   \`\`\`bash
+   npm run db:migrate
+   \`\`\`
+
+   The runner applies SQL files in \`db/migrations\` in filename order, tracks checksums in \`schema_migrations\`, rejects edits to already-applied migrations, and uses a PostgreSQL advisory lock to prevent concurrent runs. Review each migration before applying it to a production database.
+
+5. Start the application:
+
+   \`\`\`bash
+   npm run dev
+   \`\`\`
+
+   Health endpoint: \`http://localhost:3000/api/health\`.
+
+## First platform administrator
+
+Create and sign in to the intended Google account first so it exists as an active, verified row in \`user_profiles\`. Then run the bootstrap command from a trusted local/administrative environment with the database URL and exact account email set:
+
+\`\`\`bash
+REALTYOS_BOOTSTRAP_ADMIN_EMAIL=admin@example.com npm run admin:bootstrap
+\`\`\`
+
+The script only promotes an existing active, email-verified account. Do not expose this command through a public API or commit its environment values. Use it sparingly and audit administrative role changes.
 
 ## Database
 
-Migration `db/migrations/0001_initial.sql` creates:
+The initial migration creates the platform and tenant foundation:
 
-- `tenants`, `tenant_branding`, `tenant_settings`
-- `user_profiles`, `tenant_memberships`
-- `property_types`, `properties`, `property_media`, `saved_properties`
-- `leads`, `property_viewings`
-- `tenant_pages`, `subscriptions`, `audit_logs`, `platform_settings`
+- Tenants, tenant branding and tenant settings
+- User profiles and tenant memberships
+- Property types, properties, property media and saved properties
+- Leads and property viewings
+- Tenant pages, subscriptions, audit logs and platform settings
 
-All business tables are scoped by `tenant_id`.
+Business records are tenant-scoped. Server actions and APIs must derive tenant identity from the authenticated server-side context; never trust a tenant ID supplied by the browser.
 
-### Temporary API note
+## Quality checks
 
-Until authentication is live, the `/api/properties` endpoints accept an `x-tenant-id` header for testing only. This will be removed. Client-supplied tenant IDs must never be trusted in production.
+\`\`\`bash
+npm run typecheck
+npm run lint
+npm run build
+\`\`\`
 
----
+GitHub Actions runs these checks on pushes to the default branch. A green CI run is necessary but does not replace database, authentication, authorization, accessibility or end-to-end testing.
 
-## Roadmap
+## Security principles
 
-1. **Foundation** — schema, types, data access ✅
-2. **Authentication + tenant onboarding** ← next
-3. **Wire dashboard + property UI to real data**
-4. **CRM + viewings**
-5. **Tenant websites & branding**
-6. **Team management & reporting**
-7. **Super-admin console**
-8. **Billing & paid plans**
-9. **Production hardening & launch**
-
----
-
-## Security Principles
-
-- Never trust a client-supplied tenant ID
-- Enforce authorization on every server action / API route
-- Keep database credentials server-side only
-- Use parameterized queries
-- Validate all inputs with Zod
-- Log sensitive administrative actions
-
----
+- Enforce tenant and role authorization in every server action and API route.
+- Never trust client-supplied tenant identifiers.
+- Keep database and provider credentials server-side.
+- Use parameterized SQL and validate untrusted input.
+- Require verified identity for account provisioning.
+- Keep platform-admin promotion out of public request handlers.
+- Apply migrations deliberately and retain migration checksums.
+- Log sensitive administrative and tenant-management actions.
 
 ## License
 
