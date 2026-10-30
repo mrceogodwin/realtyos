@@ -152,6 +152,15 @@ export async function acceptTeamInvitationAction(rawToken: string): Promise<Team
       );
       return invite.tenant_id;
     });
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    cookieStore.set("realtyos_active_tenant", tenantId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
     return { ok: true, data: { tenantId } };
   } catch (error) {
     const code = error instanceof Error ? error.message : "";
