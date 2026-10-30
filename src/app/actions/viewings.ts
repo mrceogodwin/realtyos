@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createViewingSchema } from "@/lib/validation";
+import { createViewingSchema, updateViewingStatusSchema } from "@/lib/validation";
 import {
   createViewing as insertViewing,
   updateViewingStatus,
@@ -57,6 +57,11 @@ export async function updateViewingStatusAction(
   viewingId: string,
   status: ViewingStatus
 ): Promise<ActionResult> {
+  const parsed = updateViewingStatusSchema.safeParse({ viewingId, status });
+  if (!parsed.success) {
+    return { ok: false, error: "Invalid record ID or status", code: "VALIDATION" };
+  }
+
   const context = await getCurrentAuthContext();
   if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
   let scope;
@@ -64,7 +69,7 @@ export async function updateViewingStatusAction(
   if (!hasMinimumRole(scope.membership, "agent")) return { ok: false, error: "Insufficient permissions", code: "FORBIDDEN" };
 
   try {
-    const viewing = await updateViewingStatus(scope.tenant.id, viewingId, status);
+    const viewing = await updateViewingStatus(scope.tenant.id, parsed.data.viewingId, parsed.data.status);
     if (!viewing) {
       return {
         ok: false,
