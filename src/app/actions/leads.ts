@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createLeadSchema } from "@/lib/validation";
+import { createLeadSchema, updateLeadStatusSchema } from "@/lib/validation";
 import { createLead as insertLead, updateLeadStatus } from "@/lib/leads";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import type { LeadStatus } from "@/lib/types";
@@ -54,6 +54,11 @@ export async function updateLeadStatusAction(
   leadId: string,
   status: LeadStatus
 ): Promise<ActionResult> {
+  const parsed = updateLeadStatusSchema.safeParse({ leadId, status });
+  if (!parsed.success) {
+    return { ok: false, error: "Invalid record ID or status", code: "VALIDATION" };
+  }
+
   const context = await getCurrentAuthContext();
   if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
   let scope;
@@ -61,7 +66,7 @@ export async function updateLeadStatusAction(
   if (!hasMinimumRole(scope.membership, "agent")) return { ok: false, error: "Insufficient permissions", code: "FORBIDDEN" };
 
   try {
-    const lead = await updateLeadStatus(scope.tenant.id, leadId, status);
+    const lead = await updateLeadStatus(scope.tenant.id, parsed.data.leadId, parsed.data.status);
     if (!lead) {
       return { ok: false, error: "Lead not found in this workspace", code: "NOT_FOUND" };
     }
