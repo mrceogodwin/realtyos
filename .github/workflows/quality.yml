@@ -32,6 +32,8 @@ jobs:
       - run: npm install
       - name: Apply all database migrations to clean PostgreSQL
         run: npm run db:migrate
-      - name: Verify tenant isolation constraints with real PostgreSQL writes\n        run: npm run db:test-integrity\n      - run: npm run typecheck
+      - name: Verify tenant isolation constraints with real PostgreSQL writes
+        run: npm run db:test-integrity
+      - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
