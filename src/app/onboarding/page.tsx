@@ -3,6 +3,7 @@
 import { Building2, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createWorkspaceAction } from "@/app/actions/workspace";
 
 const steps = [
@@ -14,6 +15,7 @@ const steps = [
 ];
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const [companyName, setCompanyName] = useState("");
   const [slug, setSlug] = useState("");
   const [message, setMessage] = useState("");
@@ -44,9 +46,9 @@ export default function OnboardingPage() {
     setPending(false);
 
     if (result.ok) {
-      setMessage(
-        `Workspace "${result.data && typeof result.data === "object" && "name" in result.data ? (result.data as { name: string }).name : companyName}" is ready. Open /app to continue.`
-      );
+      setMessage("Workspace created. Opening your dashboard…");
+      router.replace("/app");
+      router.refresh();
       return;
     }
 
@@ -71,7 +73,7 @@ export default function OnboardingPage() {
         <h1>Set up your workspace</h1>
         <p className="auth-subtitle">
           This creates a tenant, default branding, settings, and your owner
-          membership — once auth and the database are connected.
+          membership. You can invite your team after setup.
         </p>
 
         <ol className="onboarding-steps">

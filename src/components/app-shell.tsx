@@ -84,10 +84,10 @@ export function AppShell({
         </div>
 
         <button className="workspace-switcher">
-          <div className="workspace-avatar">G</div>
+          <div className="workspace-avatar">R</div>
           <div className="workspace-copy">
-            <strong>GBest Luxury Realty</strong>
-            <span>Demo workspace</span>
+            <strong>Your workspace</strong>
+            <span>Active workspace</span>
           </div>
           <ChevronDown size={16} className="muted-icon" />
         </button>
@@ -149,10 +149,10 @@ export function AppShell({
         </Link>
 
         <div className="profile-row">
-          <div className="profile-avatar">GO</div>
+          <div className="profile-avatar">RO</div>
           <div className="profile-copy">
-            <strong>Godwin O.</strong>
-            <span>Workspace owner</span>
+            <strong>Your account</strong>
+            <span>Signed in</span>
           </div>
           <MoreHorizontal size={19} className="muted-icon" />
         </div>
@@ -175,7 +175,7 @@ export function AppShell({
             </div>
           </div>
           <div className="topbar-actions">
-            <div className="top-avatar">GO</div>
+            <div className="top-avatar">RO</div>
           </div>
         </header>
 
@@ -183,7 +183,7 @@ export function AppShell({
           <div className="welcome-row">
             <div>
               <div className="eyebrow">
-                <span className="live-dot" /> DEMO WORKSPACE
+                <span className="live-dot" /> WORKSPACE
               </div>
               <h1>{title}</h1>
               {subtitle && <p className="page-subtitle">{subtitle}</p>}
