@@ -13,7 +13,7 @@ async function resolveTenant() {
   if (!context) return { response: NextResponse.json({ error: "Authentication required" }, { status: 401 }) };
   try {
     const scoped = requireTenant(context);
-    return { tenantId: scoped.tenant.id, membership: scoped.membership };
+    return { tenantId: scoped.tenant.id, userId: scoped.user.id, membership: scoped.membership };
   } catch {
     return { response: NextResponse.json({ error: "Active workspace required" }, { status: 403 }) };
   }
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const parsed = createPropertySchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 });
   try {
-    const property = await createProperty(scope.tenantId, parsed.data);
+    const property = await createProperty(scope.tenantId, parsed.data, scope.userId);
     return NextResponse.json({ data: property }, { status: 201 });
   } catch (err) {
     if (err instanceof DatabaseNotConfiguredError) return NextResponse.json({ error: "Database not configured", code: "DB_NOT_CONFIGURED" }, { status: 503 });
