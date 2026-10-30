@@ -67,3 +67,44 @@ export async function createWorkspaceAction(raw: unknown): Promise<ActionResult>
     return { ok: false, error: "Failed to create workspace", code: "SERVER" };
   }
 }
+
+export async function switchWorkspaceAction(tenantId: string): Promise<ActionResult> {
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tenantId)) {
+    return { ok: false, error: "Invalid workspace", code: "VALIDATION" };
+  }
+  try {
+    const membership = await getTenantMembershipForUser(tenantId, context.user.id);
+    if (!membership || membership.status !== "active") {
+      return { ok: false, error: "You do not have active access to that workspace.", code: "FORBIDDEN" };
+    }
+    const { cookies } = await import("next/headers");
+    const cookieStore = await cookies();
+    cookieStore.set("realtyos_active_tenant", tenantId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+    revalidatePath("/app");
+    return { ok: true, data: { tenantId } };
+  } catch (error) {
+    console.error("[switchWorkspaceAction]", error);
+    return { ok: false, error: "Unable to switch workspace", code: "SERVER" };
+  }
+}
+
+async function getTenantMembershipForUser(tenantId: string, userId: string) {
+  const { queryOne } = await import("@/lib/db");
+  return queryOne<{ id: string; tenant_id: string; user_id: string; status: string }>(
+    `SELECT m.id, m.tenant_id, m.user_id, m.status
+       FROM tenant_memberships m
+       JOIN tenants t ON t.id = m.tenant_id
+      WHERE m.tenant_id = $1 AND m.user_id = $2
+        AND t.status = 'active' AND t.deleted_at IS NULL
+      LIMIT 1`,
+    [tenantId, userId]
+  );
+}
