@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 import { getCurrentAuthContext, requireTenant } from "@/lib/auth";
 import { hasMinimumRole } from "@/lib/tenant";
-import { queryOne, query } from "@/lib/db";
+import { queryOne, query, withTransaction } from "@/lib/db";
 
 export type TeamActionResult<T = unknown> =
   | { ok: true; data: T }
@@ -93,5 +93,73 @@ export async function createTeamInvitationAction(raw: unknown): Promise<TeamActi
     }
     console.error("[createTeamInvitationAction]", error);
     return { ok: false, error: "Unable to create invitation", code: "SERVER" };
+  }
+}
+
+export async function acceptTeamInvitationAction(rawToken: string): Promise<TeamActionResult<{ tenantId: string }>> {
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Sign in before accepting this invitation", code: "AUTH_REQUIRED" };
+  if (!context.user.email_verified) return { ok: false, error: "A verified email address is required", code: "EMAIL_UNVERIFIED" };
+  if (!/^[a-f0-9]{64}$/i.test(rawToken)) return { ok: false, error: "Invitation link is invalid", code: "INVALID_TOKEN" };
+
+  const tokenHash = createHash("sha256").update(rawToken).digest("hex");
+  try {
+    const tenantId = await withTransaction(async (client) => {
+      const invitation = await client.query<{
+        id: string; tenant_id: string; email: string; role: string; invited_by: string;
+      }>(
+        `SELECT id, tenant_id, email, role, invited_by
+           FROM tenant_invitations
+          WHERE token_hash = $1 AND status = 'pending' AND expires_at > now()
+          FOR UPDATE`,
+        [tokenHash]
+      );
+      const invite = invitation.rows[0];
+      if (!invite) throw new Error("INVITATION_INVALID_OR_EXPIRED");
+      if (invite.email.toLowerCase() !== context.user.email.toLowerCase()) {
+        throw new Error("INVITATION_EMAIL_MISMATCH");
+      }
+
+      const tenant = await client.query(
+        "SELECT id FROM tenants WHERE id = $1 AND status = 'active' AND deleted_at IS NULL",
+        [invite.tenant_id]
+      );
+      if (!tenant.rowCount) throw new Error("WORKSPACE_UNAVAILABLE");
+
+      const membership = await client.query(
+        `INSERT INTO tenant_memberships (tenant_id, user_id, role, status, invited_by, invited_at, accepted_at)
+         VALUES ($1, $2, $3, 'active', $4, now(), now())
+         ON CONFLICT (tenant_id, user_id) DO UPDATE
+           SET role = EXCLUDED.role, status = 'active', invited_by = EXCLUDED.invited_by,
+               invited_at = EXCLUDED.invited_at, accepted_at = now(), updated_at = now()
+         WHERE tenant_memberships.status IN ('invited', 'revoked')
+         RETURNING id`,
+        [invite.tenant_id, context.user.id, invite.role, invite.invited_by]
+      );
+      if (!membership.rowCount) {
+        const existing = await client.query(
+          "SELECT status FROM tenant_memberships WHERE tenant_id = $1 AND user_id = $2",
+          [invite.tenant_id, context.user.id]
+        );
+        if (existing.rows[0]?.status !== "active") throw new Error("MEMBERSHIP_UNAVAILABLE");
+      }
+
+      await client.query(
+        `UPDATE tenant_invitations
+            SET status = 'accepted', accepted_by = $2, accepted_at = now(), updated_at = now()
+          WHERE id = $1`,
+        [invite.id, context.user.id]
+      );
+      return invite.tenant_id;
+    });
+    return { ok: true, data: { tenantId } };
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    if (code === "INVITATION_EMAIL_MISMATCH") return { ok: false, error: "This invitation was sent to a different email address. Sign in with the invited account.", code };
+    if (code === "INVITATION_INVALID_OR_EXPIRED") return { ok: false, error: "This invitation is invalid, already used or has expired.", code };
+    if (code === "WORKSPACE_UNAVAILABLE") return { ok: false, error: "This workspace is no longer available.", code };
+    if (code === "MEMBERSHIP_UNAVAILABLE") return { ok: false, error: "Your existing membership is suspended. Contact a workspace owner.", code };
+    console.error("[acceptTeamInvitationAction]", error);
+    return { ok: false, error: "Unable to accept invitation", code: "SERVER" };
   }
 }
