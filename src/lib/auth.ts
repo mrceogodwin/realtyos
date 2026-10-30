@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { cookies } from "next/headers";
 import { queryOne } from "./db";
 import type { AuthContext, Tenant, TenantMembership, UserProfile } from "./types";
 
@@ -17,12 +18,16 @@ export async function getCurrentAuthContext(): Promise<AuthContext | null> {
   );
   if (!user) return null;
 
+  const cookieStore = await cookies();
+  const requestedTenantId = cookieStore.get("realtyos_active_tenant")?.value;
+
   const membership = await queryOne<TenantMembership>(
     `SELECT m.id, m.tenant_id, m.user_id, m.role, m.status, m.invited_by,
             m.invited_at, m.accepted_at, m.created_at, m.updated_at
        FROM tenant_memberships m
        JOIN tenants t ON t.id = m.tenant_id
       WHERE m.user_id = $1
+        AND ($2::uuid IS NULL OR m.tenant_id = $2::uuid)
         AND m.status = 'active'
         AND t.status = 'active'
         AND t.deleted_at IS NULL
@@ -31,7 +36,7 @@ export async function getCurrentAuthContext(): Promise<AuthContext | null> {
           WHEN 'agent' THEN 3 WHEN 'editor' THEN 4 ELSE 5 END,
         m.accepted_at DESC NULLS LAST, m.created_at ASC
       LIMIT 1`,
-    [user.id]
+    [user.id, requestedTenantId ?? null]
   );
 
   const tenant = membership
