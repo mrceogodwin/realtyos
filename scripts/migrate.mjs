@@ -48,7 +48,7 @@ async function main() {
     }
 
     const sql = source
-      .replace(/^\s*BEGIN\s*;?/i, "")
+      .replace(/^\s*BEGIN\s*;?/im, "")
       .replace(/COMMIT\s*;?\s*$/i, "");
 
     console.log(\`Applying: \${file}\`);
