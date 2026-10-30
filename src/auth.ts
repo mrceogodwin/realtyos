@@ -30,7 +30,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
            VALUES ($1, lower($2), true, $3, $4, now())
            ON CONFLICT (lower(email)) WHERE status <> 'deleted'
            DO UPDATE SET
-             auth_provider_id = EXCLUDED.auth_provider_id,
+             auth_provider_id = COALESCE(user_profiles.auth_provider_id, EXCLUDED.auth_provider_id),
              email_verified = true,
              full_name = COALESCE(EXCLUDED.full_name, user_profiles.full_name),
              avatar_url = COALESCE(EXCLUDED.avatar_url, user_profiles.avatar_url),
