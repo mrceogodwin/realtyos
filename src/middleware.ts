@@ -12,7 +12,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?reason=auth_not_configured", request.url));
   }
 
-  const token = await getToken({ req: request, secret });
+  const cookieName = request.nextUrl.protocol === "https:"
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token";
+  const token = await getToken({ req: request, secret, cookieName });
+
   if (!token?.id) {
     const destination = new URL("/login", request.url);
     destination.searchParams.set("callbackUrl", path);
