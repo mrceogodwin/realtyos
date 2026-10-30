@@ -8,6 +8,8 @@ import {
 } from "@/lib/viewings";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import type { ViewingStatus } from "@/lib/types";
+import { getCurrentAuthContext, requireTenant } from "@/lib/auth";
+import { hasMinimumRole } from "@/lib/tenant";
 
 export type ActionResult<
   T = unknown
@@ -19,9 +21,11 @@ export async function createViewingAction(
   raw: unknown,
   tenantId: string
 ): Promise<ActionResult> {
-  if (!tenantId || typeof tenantId !== "string") {
-    return { ok: false, error: "Tenant context is required", code: "NO_TENANT" };
-  }
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
+  let scope;
+  try { scope = requireTenant(context); } catch { return { ok: false, error: "Active workspace required", code: "NO_TENANT" }; }
+  if (!hasMinimumRole(scope.membership, "agent")) return { ok: false, error: "Insufficient permissions", code: "FORBIDDEN" };
 
   const parsed = createViewingSchema.safeParse(raw);
   if (!parsed.success) {
@@ -33,7 +37,7 @@ export async function createViewingAction(
   }
 
   try {
-    const viewing = await insertViewing(tenantId, parsed.data);
+    const viewing = await insertViewing(scope.tenant.id, parsed.data);
     revalidatePath("/app/viewings");
     revalidatePath("/app");
     return { ok: true, data: viewing };
@@ -55,12 +59,14 @@ export async function updateViewingStatusAction(
   viewingId: string,
   status: ViewingStatus
 ): Promise<ActionResult> {
-  if (!tenantId || !viewingId) {
-    return { ok: false, error: "Tenant and viewing are required", code: "NO_CONTEXT" };
-  }
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
+  let scope;
+  try { scope = requireTenant(context); } catch { return { ok: false, error: "Active workspace required", code: "NO_TENANT" }; }
+  if (!hasMinimumRole(scope.membership, "agent")) return { ok: false, error: "Insufficient permissions", code: "FORBIDDEN" };
 
   try {
-    const viewing = await updateViewingStatus(tenantId, viewingId, status);
+    const viewing = await updateViewingStatus(scope.tenant.id, viewingId, status);
     if (!viewing) {
       return {
         ok: false,
