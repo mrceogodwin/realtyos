@@ -4,6 +4,7 @@ DECLARE
   tenant_b UUID := gen_random_uuid();
   user_a UUID := gen_random_uuid();
   user_b UUID := gen_random_uuid();
+  user_c UUID := gen_random_uuid();
   property_a UUID := gen_random_uuid();
   lead_a UUID := gen_random_uuid();
 BEGIN
@@ -13,11 +14,13 @@ BEGIN
 
   INSERT INTO user_profiles (id, email, email_verified) VALUES
     (user_a, 'integrity-a-' || tenant_a::text || '@example.invalid', true),
-    (user_b, 'integrity-b-' || tenant_b::text || '@example.invalid', true);
+    (user_b, 'integrity-b-' || tenant_b::text || '@example.invalid', true),
+    (user_c, 'integrity-c-' || tenant_a::text || '@example.invalid', true);
 
   INSERT INTO tenant_memberships (tenant_id, user_id, role, status) VALUES
     (tenant_a, user_a, 'owner', 'active'),
-    (tenant_b, user_b, 'owner', 'active');
+    (tenant_b, user_b, 'owner', 'active'),
+    (tenant_a, user_c, 'owner', 'active');
 
   INSERT INTO properties (id, tenant_id, title, slug, price, assigned_agent_id, created_by)
   VALUES (property_a, tenant_a, 'Tenant A property', 'tenant-a-property', 1000000, user_a, user_a);
@@ -104,6 +107,21 @@ BEGIN
     VALUES (tenant_b, user_b, property_a);
     RAISE EXCEPTION 'Tenant isolation failure: cross-tenant saved property was accepted';
   EXCEPTION WHEN foreign_key_violation THEN
+    NULL;
+  END;
+
+
+  -- A workspace with two owners may demote one, but never its final active owner.
+  UPDATE tenant_memberships
+     SET role = 'agent'
+   WHERE tenant_id = tenant_a AND user_id = user_a;
+
+  BEGIN
+    UPDATE tenant_memberships
+       SET status = 'suspended'
+     WHERE tenant_id = tenant_a AND user_id = user_c;
+    RAISE EXCEPTION 'Owner protection failure: final active owner was suspended';
+  EXCEPTION WHEN check_violation THEN
     NULL;
   END;
 
