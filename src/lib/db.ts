@@ -11,7 +11,7 @@ function createPool() {
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.DATABASE_URL.includes("localhost")
       ? undefined
-      : { rejectUnauthorized: false },
+      : { rejectUnauthorized: true },
     max: 5,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 5_000,
