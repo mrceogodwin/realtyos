@@ -18,8 +18,7 @@ export type ActionResult<
   | { ok: false; error: string; code?: string };
 
 export async function createViewingAction(
-  raw: unknown,
-  tenantId: string
+  raw: unknown
 ): Promise<ActionResult> {
   const context = await getCurrentAuthContext();
   if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
@@ -55,7 +54,6 @@ export async function createViewingAction(
 }
 
 export async function updateViewingStatusAction(
-  tenantId: string,
   viewingId: string,
   status: ViewingStatus
 ): Promise<ActionResult> {
