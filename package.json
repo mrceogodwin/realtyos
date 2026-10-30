@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:migrate": "node scripts/migrate.mjs",
+    "db:test-integrity": "node scripts/test-tenant-integrity.mjs",
     "admin:bootstrap": "node scripts/bootstrap-super-admin.mjs"
   },
   "dependencies": {
