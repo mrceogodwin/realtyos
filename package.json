@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "echo 'Apply db/migrations/*.sql to your Neon database (see README)'"
+    "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
