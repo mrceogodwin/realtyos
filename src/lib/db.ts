@@ -1,4 +1,4 @@
-import { Pool, type QueryResultRow } from "pg";
+import { Pool, type PoolClient, type QueryResultRow } from "pg";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -58,4 +58,21 @@ export async function queryMany<T extends QueryResultRow = QueryResultRow>(
 ): Promise<T[]> {
   const result = await query<T>(text, params);
   return result.rows;
+}
+
+export async function withTransaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
+  const pool = getPool();
+  if (!pool) throw new DatabaseNotConfiguredError();
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await work(client);
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
