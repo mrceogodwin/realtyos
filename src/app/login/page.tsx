@@ -1,55 +1,42 @@
 "use client";
 
+import { signIn } from "next-auth/react";
 import { Building2 } from "lucide-react";
 import Link from "next/link";
 
 export default function LoginPage() {
+  const configured = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
+
   return (
     <main className="auth-shell">
       <div className="auth-card">
         <div className="auth-brand">
-          <div className="brand-mark">
-            <Building2 size={22} strokeWidth={2.1} />
-          </div>
+          <div className="brand-mark"><Building2 size={22} strokeWidth={2.1} /></div>
           <div>
-            <div className="brand-name">
-              realty<span>OS</span>
-            </div>
+            <div className="brand-name">realty<span>OS</span></div>
             <div className="brand-caption">REAL ESTATE, UNDER CONTROL</div>
           </div>
         </div>
-
         <h1>Sign in to your workspace</h1>
         <p className="auth-subtitle">
-          Authentication is being connected. Once AUTH_SECRET and the database
-          are configured, email and password sign-in will work here.
+          Secure access to your real estate business, team and listings.
         </p>
-
-        <form
-          className="auth-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            alert(
-              "Auth providers are not live yet. Configure AUTH_SECRET + DATABASE_URL and finish the Auth.js setup."
-            );
-          }}
-        >
-          <label>
-            Email
-            <input type="email" required placeholder="you@agency.com" />
-          </label>
-          <label>
-            Password
-            <input type="password" required placeholder="••••••••" />
-          </label>
-          <button type="submit" className="primary-button auth-submit">
-            Sign in
+        {configured ? (
+          <button
+            type="button"
+            className="primary-button auth-submit"
+            onClick={() => signIn("google", { callbackUrl: "/app" })}
+          >
+            Continue with Google
           </button>
-        </form>
-
+        ) : (
+          <p className="form-error">
+            Google sign-in is not configured. Add the OAuth credentials and
+            authentication secret to your environment, then enable the sign-in button.
+          </p>
+        )}
         <p className="auth-footer">
-          New to RealtyOS?{" "}
-          <Link href="/onboarding">Create a workspace</Link>
+          New to RealtyOS? <Link href="/onboarding">Create a workspace</Link>
         </p>
       </div>
     </main>
