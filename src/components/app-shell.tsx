@@ -87,14 +87,14 @@ export function AppShell({
           </button>
         </div>
 
-        <button className="workspace-switcher">
+        <Link href="/app/workspaces" className="workspace-switcher" aria-label="Switch workspace">
           <div className="workspace-avatar">{workspaceInitial}</div>
           <div className="workspace-copy">
             <strong>{workspace.workspaceName}</strong>
-            <span>{workspace.role}</span>
+            <span>{workspace.role} · Switch workspace</span>
           </div>
           <ChevronDown size={16} className="muted-icon" />
-        </button>
+        </Link>
 
         <div className="side-section-label">WORKSPACE</div>
         <nav className="side-nav" aria-label="Workspace navigation">
