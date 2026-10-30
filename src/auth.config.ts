@@ -1,43 +1,37 @@
 import type { NextAuthConfig } from "next-auth";
 
-/**
- * Shared Auth.js configuration.
- * Providers and adapter will be completed once AUTH_SECRET and DATABASE_URL are available.
- */
 export const authConfig = {
   pages: {
     signIn: "/login",
     newUser: "/onboarding",
   },
-  session: {
-    strategy: "jwt",
-  },
+  session: { strategy: "jwt" },
   providers: [],
   callbacks: {
     authorized({ auth, request }) {
-      const isLoggedIn = !!auth?.user;
-      const isOnDashboard =
-        request.nextUrl.pathname.startsWith("/dashboard") ||
-        request.nextUrl.pathname === "/";
-      const isAuthPage =
-        request.nextUrl.pathname.startsWith("/login") ||
-        request.nextUrl.pathname.startsWith("/onboarding") ||
-        request.nextUrl.pathname.startsWith("/api/auth");
+      const path = request.nextUrl.pathname;
+      const isPublicAuthRoute =
+        path.startsWith("/login") ||
+        path.startsWith("/onboarding") ||
+        path.startsWith("/api/auth");
+      if (isPublicAuthRoute) return true;
 
-      // For now allow everything; tighten once providers are live
-      if (isAuthPage) return true;
-      if (isOnDashboard) return true; // temporary — will require isLoggedIn
+      const isProtectedRoute =
+        path === "/app" ||
+        path.startsWith("/app/") ||
+        path === "/admin" ||
+        path.startsWith("/admin/");
+      if (isProtectedRoute) return Boolean(auth?.user);
+
       return true;
     },
     jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
+      if (user?.id) token.id = user.id;
       return token;
     },
     session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id as string;
+      if (session.user && typeof token.id === "string") {
+        session.user.id = token.id;
       }
       return session;
     },
