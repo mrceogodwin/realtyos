@@ -6,36 +6,26 @@ import { createTenant, getTenantBySlug } from "@/lib/tenants";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import { getCurrentAuthContext } from "@/lib/auth";
 
-export type ActionResult<
-  T = unknown
-> =
+export type ActionResult<T = unknown> =
   | { ok: true; data: T }
   | { ok: false; error: string; code?: string };
 
-/**
- * Creates a tenant workspace. Until full auth is live, ownerUserId is optional
- * and must be replaced by the authenticated user id from session.
- */
-export async function createWorkspaceAction(
-  raw: unknown,
-  ownerUserId?: string
-): Promise<ActionResult> {
-  const parsed = createTenantSchema.safeParse(raw);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues.map((i) => i.message).join("; "),
-      code: "VALIDATION",
-    };
-  }
-
+export async function createWorkspaceAction(raw: unknown): Promise<ActionResult> {
   const context = await getCurrentAuthContext();
   if (!context) {
     return {
       ok: false,
-      error:
-        "Sign-in is required to create a workspace. Auth is scaffolded; connect AUTH_SECRET and complete login first.",
+      error: "Sign in with a verified Google account before creating a workspace.",
       code: "AUTH_REQUIRED",
+    };
+  }
+
+  const parsed = createTenantSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues.map((issue) => issue.message).join("; "),
+      code: "VALIDATION",
     };
   }
 
@@ -49,21 +39,22 @@ export async function createWorkspaceAction(
       };
     }
 
+    // The owner identity is always derived from the verified server session.
     const tenant = await createTenant(parsed.data, context.user.id);
     revalidatePath("/app");
+    revalidatePath("/onboarding");
     revalidatePath(`/s/${tenant.slug}`);
     return { ok: true, data: tenant };
-  } catch (err) {
-    if (err instanceof DatabaseNotConfiguredError) {
+  } catch (error) {
+    if (error instanceof DatabaseNotConfiguredError) {
       return {
         ok: false,
-        error:
-          "Database is not configured yet. Set DATABASE_URL and run db/migrations/0001_initial.sql.",
+        error: "Database is not configured. Configure DATABASE_URL and apply the database migrations.",
         code: "DB_NOT_CONFIGURED",
       };
     }
 
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const message = error instanceof Error ? error.message : "Unknown error";
     if (message.includes("unique") || message.includes("duplicate")) {
       return {
         ok: false,
@@ -72,7 +63,7 @@ export async function createWorkspaceAction(
       };
     }
 
-    console.error("[createWorkspaceAction]", err);
+    console.error("[createWorkspaceAction]", error);
     return { ok: false, error: "Failed to create workspace", code: "SERVER" };
   }
 }
