@@ -15,8 +15,7 @@ export type ActionResult<
   | { ok: false; error: string; code?: string };
 
 export async function createLeadAction(
-  raw: unknown,
-  tenantId: string
+  raw: unknown
 ): Promise<ActionResult> {
   const context = await getCurrentAuthContext();
   if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
@@ -52,7 +51,6 @@ export async function createLeadAction(
 }
 
 export async function updateLeadStatusAction(
-  tenantId: string,
   leadId: string,
   status: LeadStatus
 ): Promise<ActionResult> {
