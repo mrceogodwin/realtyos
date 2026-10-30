@@ -19,7 +19,10 @@ export async function getCurrentAuthContext(): Promise<AuthContext | null> {
   if (!user) return null;
 
   const cookieStore = await cookies();
-  const requestedTenantId = cookieStore.get("realtyos_active_tenant")?.value;
+  const rawRequestedTenantId = cookieStore.get("realtyos_active_tenant")?.value;
+  const requestedTenantId = rawRequestedTenantId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(rawRequestedTenantId)
+    ? rawRequestedTenantId
+    : null;
 
   let membership = await queryOne<TenantMembership>(
     `SELECT m.id, m.tenant_id, m.user_id, m.role, m.status, m.invited_by,
