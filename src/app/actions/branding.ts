@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { updateTenantBranding, updateTenantSettings } from "@/lib/tenants";
-import { DatabaseNotConfiguredError } from "@/lib/db";
+import { DatabaseNotConfiguredError, withTransaction } from "@/lib/db";
 import { getCurrentAuthContext, requireTenant } from "@/lib/auth";
 import { hasMinimumRole } from "@/lib/tenant";
 
@@ -21,7 +21,7 @@ const brandingSchema = z.object({
   hero_subtitle: z.string().max(500).optional().nullable(),
   seo_title: z.string().max(120).optional().nullable(),
   seo_description: z.string().max(300).optional().nullable(),
-  custom_domain: z.string().max(200).optional().nullable(),
+  custom_domain: z.string().trim().max(253).regex(/^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,63}$/).optional().nullable(),
 });
 
 export async function saveBrandingAction(
