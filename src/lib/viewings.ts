@@ -76,6 +76,29 @@ export async function createViewing(
   input: CreateViewingInput,
   createdBy?: string | null
 ): Promise<PropertyViewing> {
+  const property = await queryOne<{ id: string }>(
+    "SELECT id FROM properties WHERE id = $1 AND tenant_id = $2",
+    [input.property_id, tenantId]
+  );
+  if (!property) throw new Error("Property does not belong to this workspace");
+
+  if (input.lead_id) {
+    const lead = await queryOne<{ id: string }>(
+      "SELECT id FROM leads WHERE id = $1 AND tenant_id = $2",
+      [input.lead_id, tenantId]
+    );
+    if (!lead) throw new Error("Lead does not belong to this workspace");
+  }
+
+  if (input.agent_id) {
+    const membership = await queryOne<{ user_id: string }>(
+      `SELECT user_id FROM tenant_memberships
+       WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'`,
+      [tenantId, input.agent_id]
+    );
+    if (!membership) throw new Error("Assigned agent is not an active member of this workspace");
+  }
+
   const result = await query<PropertyViewing>(
     `INSERT INTO property_viewings (
       tenant_id, property_id, lead_id, agent_id,
