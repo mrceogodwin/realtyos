@@ -75,3 +75,13 @@ export const createTenantSchema = z.object({
 });
 
 export type CreateTenantInput = z.infer<typeof createTenantSchema>;
+
+export const updateLeadStatusSchema = z.object({
+  leadId: z.string().uuid(),
+  status: z.enum(["new", "contacted", "qualified", "viewing_scheduled", "negotiating", "won", "lost", "spam"]),
+});
+
+export const updateViewingStatusSchema = z.object({
+  viewingId: z.string().uuid(),
+  status: z.enum(["requested", "confirmed", "rescheduled", "completed", "cancelled", "no_show"]),
+});
