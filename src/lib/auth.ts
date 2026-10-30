@@ -21,7 +21,7 @@ export async function getCurrentAuthContext(): Promise<AuthContext | null> {
   const cookieStore = await cookies();
   const requestedTenantId = cookieStore.get("realtyos_active_tenant")?.value;
 
-  const membership = await queryOne<TenantMembership>(
+  let membership = await queryOne<TenantMembership>(
     `SELECT m.id, m.tenant_id, m.user_id, m.role, m.status, m.invited_by,
             m.invited_at, m.accepted_at, m.created_at, m.updated_at
        FROM tenant_memberships m
@@ -38,6 +38,23 @@ export async function getCurrentAuthContext(): Promise<AuthContext | null> {
       LIMIT 1`,
     [user.id, requestedTenantId ?? null]
   );
+
+  // A stale or revoked workspace cookie must not lock a user out of other memberships.
+  if (!membership && requestedTenantId) {
+    membership = await queryOne<TenantMembership>(
+      `SELECT m.id, m.tenant_id, m.user_id, m.role, m.status, m.invited_by,
+              m.invited_at, m.accepted_at, m.created_at, m.updated_at
+         FROM tenant_memberships m
+         JOIN tenants t ON t.id = m.tenant_id
+        WHERE m.user_id = $1 AND m.status = 'active'
+          AND t.status = 'active' AND t.deleted_at IS NULL
+        ORDER BY CASE m.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2
+          WHEN 'agent' THEN 3 WHEN 'editor' THEN 4 ELSE 5 END,
+          m.accepted_at DESC NULLS LAST, m.created_at ASC
+        LIMIT 1`,
+      [user.id]
+    );
+  }
 
   const tenant = membership
     ? await queryOne<Tenant>(
