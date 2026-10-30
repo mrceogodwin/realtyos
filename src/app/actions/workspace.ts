@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createTenantSchema } from "@/lib/validation";
 import { createTenant, getTenantBySlug } from "@/lib/tenants";
 import { DatabaseNotConfiguredError } from "@/lib/db";
+import { getCurrentAuthContext } from "@/lib/auth";
 
 export type ActionResult<
   T = unknown
@@ -28,7 +29,8 @@ export async function createWorkspaceAction(
     };
   }
 
-  if (!ownerUserId) {
+  const context = await getCurrentAuthContext();
+  if (!context) {
     return {
       ok: false,
       error:
@@ -47,7 +49,7 @@ export async function createWorkspaceAction(
       };
     }
 
-    const tenant = await createTenant(parsed.data, ownerUserId);
+    const tenant = await createTenant(parsed.data, context.user.id);
     revalidatePath("/app");
     revalidatePath(`/s/${tenant.slug}`);
     return { ok: true, data: tenant };
