@@ -132,7 +132,23 @@ export function AppShell({
           ))}
         </nav>
 
-        {workspace.isSuperAdmin && (\n          <><div className="side-section-label management-label">PLATFORM</div><nav className="side-nav" aria-label="Platform navigation"><Link href="/admin" onClick={() => setMobileMenu(false)} className={"nav-item " + (isActive("/admin") ? "nav-active" : "")}><ShieldCheck size={18} strokeWidth={1.8} /><span>Super admin</span></Link></nav></>\n        )}\n\n        <div className="sidebar-spacer" />
+        {workspace.isSuperAdmin && (
+          <>
+            <div className="side-section-label management-label">PLATFORM</div>
+            <nav className="side-nav" aria-label="Platform navigation">
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenu(false)}
+                className={"nav-item " + (isActive("/admin") ? "nav-active" : "")}
+              >
+                <ShieldCheck size={18} strokeWidth={1.8} />
+                <span>Super admin</span>
+              </Link>
+            </nav>
+          </>
+        )}
+
+\n        <div className="sidebar-spacer" />
 
         <div className="upgrade-card">
           <div className="upgrade-icon">
