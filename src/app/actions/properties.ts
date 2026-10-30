@@ -14,13 +14,10 @@ export type ActionResult<
   | { ok: false; error: string; code?: string };
 
 /**
- * Temporary: until authentication is implemented, this action accepts an explicit
- * tenantId. Once auth lands, tenantId will be resolved from the session only.
- * Never trust a tenantId that comes from the client in production.
+ * Workspace scope is always derived from the authenticated server session.
  */
 export async function createPropertyAction(
-  raw: unknown,
-  tenantId: string
+  raw: unknown
 ): Promise<ActionResult> {
   const context = await getCurrentAuthContext();
   if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
@@ -50,7 +47,7 @@ export async function createPropertyAction(
           .slice(0, 80),
     };
 
-    const property = await insertProperty(scope.tenant.id, input);
+    const property = await insertProperty(scope.tenant.id, input, scope.user.id);
     revalidatePath("/");
     return { ok: true, data: property };
   } catch (err) {
