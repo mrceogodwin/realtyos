@@ -19,12 +19,10 @@ async function main() {
   await client.query("BEGIN");
   try {
     const result = await client.query(
-      \`UPDATE user_profiles
-          SET platform_role = 'super_admin', updated_at = now()
-        WHERE lower(email) = $1
-          AND email_verified = true
-          AND status = 'active'
-        RETURNING id\`,
+      "UPDATE user_profiles " +
+      "SET platform_role = 'super_admin', updated_at = now() " +
+      "WHERE lower(email) = $1 AND email_verified = true AND status = 'active' " +
+      "RETURNING id",
       [adminEmail]
     );
 
