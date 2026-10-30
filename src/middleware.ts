@@ -1,15 +1,27 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-/**
- * Lightweight middleware until Auth.js is fully configured with AUTH_SECRET.
- * When AUTH_SECRET is present, we can switch back to NextAuth(authConfig).auth.
- * For now this keeps the app deployable and leaves room for route protection.
- */
-export function middleware(_request: NextRequest) {
+export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  if (!path.startsWith("/app") && !path.startsWith("/admin")) {
+    return NextResponse.next();
+  }
+
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) {
+    return NextResponse.redirect(new URL("/login?reason=auth_not_configured", request.url));
+  }
+
+  const token = await getToken({ req: request, secret });
+  if (!token?.id) {
+    const destination = new URL("/login", request.url);
+    destination.searchParams.set("callbackUrl", path);
+    return NextResponse.redirect(destination);
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!api/health|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/app/:path*", "/admin/:path*"],
 };
