@@ -81,6 +81,15 @@ export async function createProperty(
   input: CreatePropertyInput,
   createdBy?: string | null
 ): Promise<Property> {
+  if (input.assigned_agent_id) {
+    const membership = await queryOne<{ user_id: string }>(
+      `SELECT user_id FROM tenant_memberships
+       WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'`,
+      [tenantId, input.assigned_agent_id]
+    );
+    if (!membership) throw new Error("Assigned agent is not an active member of this workspace");
+  }
+
   const result = await query<Property>(
     `INSERT INTO properties (
       tenant_id, title, slug, description, listing_type, property_type_id,
