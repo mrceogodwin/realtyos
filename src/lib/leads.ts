@@ -59,6 +59,14 @@ export async function createLead(
   tenantId: string,
   input: CreateLeadInput
 ): Promise<Lead> {
+  if (input.property_id) {
+    const property = await queryOne<{ id: string }>(
+      "SELECT id FROM properties WHERE id = $1 AND tenant_id = $2",
+      [input.property_id, tenantId]
+    );
+    if (!property) throw new Error("Property does not belong to this workspace");
+  }
+
   const result = await query<Lead>(
     `INSERT INTO leads (
       tenant_id, property_id, full_name, email, phone, source,
@@ -87,6 +95,15 @@ export async function updateLeadStatus(
   status: LeadStatus,
   assignedAgentId?: string | null
 ): Promise<Lead | null> {
+  if (assignedAgentId) {
+    const membership = await queryOne<{ user_id: string }>(
+      `SELECT user_id FROM tenant_memberships
+       WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'`,
+      [tenantId, assignedAgentId]
+    );
+    if (!membership) throw new Error("Assigned agent is not an active member of this workspace");
+  }
+
   return queryOne<Lead>(
     `UPDATE leads
      SET status = $1,
