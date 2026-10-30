@@ -47,6 +47,10 @@ export async function createTeamInvitationAction(raw: unknown): Promise<TeamActi
   }
 
   try {
+    await query(
+      "UPDATE tenant_invitations SET status = 'expired', updated_at = now() WHERE tenant_id = $1 AND status = 'pending' AND expires_at <= now()",
+      [scope.tenant.id]
+    );
     const existingMember = await queryOne<{ id: string; status: string }>(
       `SELECT id, status FROM tenant_memberships
         WHERE tenant_id = $1
@@ -56,6 +60,9 @@ export async function createTeamInvitationAction(raw: unknown): Promise<TeamActi
     );
     if (existingMember?.status === "active") {
       return { ok: false, error: "This person is already a workspace member", code: "ALREADY_MEMBER" };
+    }
+    if (existingMember?.status === "suspended") {
+      return { ok: false, error: "This person has a suspended workspace membership. An owner must restore access before inviting them again.", code: "MEMBERSHIP_SUSPENDED" };
     }
 
     const rawToken = randomBytes(32).toString("hex");
