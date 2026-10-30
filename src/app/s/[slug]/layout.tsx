@@ -1,4 +1,4 @@
-import "../public-site.css";
+import "../../public-site.css";
 
 export default function PublicSiteLayout({
   children,
