@@ -5,6 +5,14 @@ import { Plus, Search, X } from "lucide-react";
 import { createLeadAction, updateLeadStatusAction, updateLeadWorkflowAction } from "@/app/actions/leads";
 import type { Lead, LeadStatus } from "@/lib/types";
 
+function toLocalDateTimeInput(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 const stages: Array<LeadStatus | "all"> = ["all", "new", "contacted", "qualified", "viewing_scheduled", "negotiating", "won", "lost"];
 const labels: Record<string, string> = { new: "New", contacted: "Contacted", qualified: "Qualified", viewing_scheduled: "Viewing scheduled", negotiating: "Negotiating", won: "Won", lost: "Lost", spam: "Spam" };
 
@@ -54,7 +62,7 @@ export function LeadsWorkspace({ initialLeads, agents }: { initialLeads: Lead[];
   }
 
   function saveWorkflow(lead: Lead) {
-    const followUpValue = followUps[lead.id] ?? (lead.follow_up_at ? new Date(lead.follow_up_at).toISOString().slice(0, 16) : "");
+    const followUpValue = followUps[lead.id] ?? (lead.follow_up_at ? toLocalDateTimeInput(lead.follow_up_at) : "");
     const assignedAgentId = assignments[lead.id] !== undefined ? (assignments[lead.id] || null) : lead.assigned_agent_id;
     startTransition(async () => {
       const result = await updateLeadWorkflowAction({
