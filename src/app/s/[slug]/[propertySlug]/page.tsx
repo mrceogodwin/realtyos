@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Building2, MapPin } from "lucide-react";
-import { getTenantBySlug, getTenantBranding } from "@/lib/tenants";
+import { getTenantBySlug, getTenantBranding, getTenantSettings } from "@/lib/tenants";
 import { getPropertyBySlug } from "@/lib/properties";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import { PublicEnquiryForm } from "@/components/public-enquiry-form";
@@ -32,7 +32,7 @@ export default async function PublicPropertyDetailPage({ params }: Props) {
     }
   }
 
-  const name = tenant?.name ?? formatSlug(slug);
+  if (tenant && !dbError && settings?.published !== true) {\n    return <main className="auth-shell"><section className="auth-card"><h1>Website not published</h1><p className="auth-subtitle">This agency has not made its public website available yet.</p></section></main>;\n  }\n\n  const name = tenant?.name ?? formatSlug(slug);
   const primary = branding?.primary_color ?? "#12634b";
 
   return (
