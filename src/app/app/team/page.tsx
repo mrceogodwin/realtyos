@@ -74,7 +74,7 @@ export default async function TeamPage() {
       {canManage && (
         <section className="panel">
           <div className="panel-heading"><div><h2>Invitations</h2><p>Secure invitation creation and email delivery are not enabled yet.</p></div></div>
-          <p className="empty-state">Create a single-use invitation link for a specific email address. Links expire after seven days and require the invited person to sign in with that verified email.</p><TeamInviteForm />
+          <p className="empty-state">Create a single-use invitation link for a specific email address. Links expire after seven days and require the invited person to sign in with that verified email.</p><TeamInviteForm canInviteAdmin={context.membership.role === "owner"} />
         </section>
       )}
     </AppShell>
