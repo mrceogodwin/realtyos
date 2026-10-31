@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Plus, Search, X } from "lucide-react";
-import { createLeadAction, updateLeadStatusAction, updateLeadWorkflowAction } from "@/app/actions/leads";
+import { createLeadAction, updateLeadStatusAction, updateLeadWorkflowAction, addLeadNoteAction } from "@/app/actions/leads";
 import type { Lead, LeadStatus } from "@/lib/types";
 import type { LeadActivity } from "@/lib/leads";
 
@@ -25,6 +25,7 @@ export function LeadsWorkspace({ initialLeads, agents, activities }: { initialLe
   const [stage, setStage] = useState<LeadStatus | "all">("all");
   const [followUps, setFollowUps] = useState<Record<string, string>>({});
   const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -62,6 +63,16 @@ export function LeadsWorkspace({ initialLeads, agents, activities }: { initialLe
     });
   }
 
+  function addNote(leadId: string) {
+    const note = (notes[leadId] || "").trim();
+    if (!note) return;
+    startTransition(async () => {
+      const result = await addLeadNoteAction({ leadId, note });
+      if (!result.ok) { setError(result.error); return; }
+      setNotes((current) => ({ ...current, [leadId]: "" }));
+      window.location.reload();
+    });
+  }
   function saveWorkflow(lead: Lead) {
     const followUpValue = followUps[lead.id] ?? (lead.follow_up_at ? toLocalDateTimeInput(lead.follow_up_at) : "");
     const assignedAgentId = assignments[lead.id] !== undefined ? (assignments[lead.id] || null) : lead.assigned_agent_id;
@@ -103,7 +114,7 @@ export function LeadsWorkspace({ initialLeads, agents, activities }: { initialLe
                 <button type="button" className="secondary-button" disabled={pending} onClick={() => saveWorkflow(lead)}>Save</button>
               </div>
               <select aria-label={"Update status for " + lead.full_name} value={lead.status} disabled={pending} onChange={(event) => changeStatus(lead.id, event.target.value as LeadStatus)}>{stages.filter((item): item is LeadStatus => item !== "all").map((item) => <option key={item} value={item}>{labels[item]}</option>)}</select>
-              <details className="lead-activity"><summary>Activity ({activities.filter((activity) => activity.lead_id === lead.id).length})</summary><ol>{activities.filter((activity) => activity.lead_id === lead.id).map((activity) => <li key={activity.id}><strong>{activity.action.replace("lead.", "").replaceAll("_", " ")}</strong><span>{activity.actor_name || activity.actor_email || "Workspace member"} · {new Date(activity.created_at).toLocaleString()}</span></li>)}</ol></details>
+              <details className="lead-activity"><summary>Activity ({activities.filter((activity) => activity.lead_id === lead.id).length})</summary><div className="lead-note-entry"><textarea aria-label={"Add note for " + lead.full_name} value={notes[lead.id] || ""} maxLength={5000} rows={2} placeholder="Add an internal note…" onChange={(event) => setNotes((current) => ({ ...current, [lead.id]: event.target.value }))} /><button type="button" className="secondary-button" disabled={pending || !(notes[lead.id] || "").trim()} onClick={() => addNote(lead.id)}>Add note</button></div><ol>{activities.filter((activity) => activity.lead_id === lead.id).map((activity) => <li key={activity.id}><strong>{activity.action === "lead.note_added" ? "Note" : activity.action.replace("lead.", "").replaceAll("_", " ")}</strong>{typeof activity.metadata?.note === "string" && <p>{activity.metadata.note}</p>}<span>{activity.actor_name || activity.actor_email || "Workspace member"} · {new Date(activity.created_at).toLocaleString()}</span></li>)}</ol></details>
             </article>
           ))}
           {rows.length === 0 && <div className="empty-state"><Search size={22} /><strong>{leads.length ? "No leads match" : "No leads yet"}</strong><span>{leads.length ? "Try another search or stage." : "Add your first client lead to start the pipeline."}</span></div>}
