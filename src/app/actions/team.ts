@@ -41,6 +41,10 @@ export async function createTeamInvitationAction(raw: unknown): Promise<TeamActi
     return { ok: false, error: parsed.error.issues.map((issue) => issue.message).join("; "), code: "VALIDATION" };
   }
 
+  if (parsed.data.role === "admin" && scope.membership.role !== "owner") {
+    return { ok: false, error: "Only a workspace owner can invite another admin", code: "FORBIDDEN" };
+  }
+
   const email = parsed.data.email.toLowerCase();
   if (email === scope.user.email.toLowerCase()) {
     return { ok: false, error: "You are already a member of this workspace", code: "ALREADY_MEMBER" };
