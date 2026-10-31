@@ -81,3 +81,5 @@
 
 /* Keep the public enquiry honeypot out of the visual and keyboard flow. */
 .pub-honeypot{position:absolute!important;left:-10000px!important;top:auto!important;width:1px!important;height:1px!important;overflow:hidden!important;}
+
+.property-status-control{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:10px}.property-status-control select{max-width:145px;min-height:30px;padding:4px 8px;border:1px solid #e1e8e1;border-radius:7px;background:#fff;color:#526057;font-size:10px}.property-status-control .secondary-button{padding:6px 9px;font-size:10px}.property-status-control .form-error{font-size:10px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
