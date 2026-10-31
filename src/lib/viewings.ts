@@ -117,18 +117,45 @@ export async function createViewing(
   });
 }
 
+export class ViewingStatusTransitionError extends Error {
+  constructor(message = "That status change is not allowed for this appointment.") {
+    super(message);
+    this.name = "ViewingStatusTransitionError";
+  }
+}
+
+const allowedViewingTransitions: Record<ViewingStatus, ViewingStatus[]> = {
+  requested: ["confirmed", "cancelled"],
+  confirmed: ["rescheduled", "completed", "cancelled", "no_show"],
+  rescheduled: ["confirmed", "completed", "cancelled", "no_show"],
+  completed: [],
+  cancelled: [],
+  no_show: [],
+};
+
 export async function updateViewingStatus(
   tenantId: string,
   viewingId: string,
   status: ViewingStatus
 ): Promise<PropertyViewing | null> {
-  return queryOne<PropertyViewing>(
-    `UPDATE property_viewings
-     SET status = $1, updated_at = now()
-     WHERE id = $2 AND tenant_id = $3
-     RETURNING *`,
-    [status, viewingId, tenantId]
-  );
+  return withTransaction(async (client) => {
+    const currentResult = await client.query<PropertyViewing>(
+      "SELECT * FROM property_viewings WHERE id = $1 AND tenant_id = $2 FOR UPDATE",
+      [viewingId, tenantId]
+    );
+    const current = currentResult.rows[0];
+    if (!current) return null;
+    if (current.status === status) return current;
+    if (!allowedViewingTransitions[current.status].includes(status)) {
+      throw new ViewingStatusTransitionError();
+    }
+    const updated = await client.query<PropertyViewing>(
+      `UPDATE property_viewings SET status = $1, updated_at = now()
+        WHERE id = $2 AND tenant_id = $3 RETURNING *`,
+      [status, viewingId, tenantId]
+    );
+    return updated.rows[0] ?? null;
+  });
 }
 
 
