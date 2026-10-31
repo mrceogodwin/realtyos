@@ -183,3 +183,42 @@ export async function acceptTeamInvitationAction(rawToken: string): Promise<Team
     return { ok: false, error: "Unable to accept invitation", code: "SERVER" };
   }
 }
+
+const revokeInvitationSchema = z.object({ invitationId: z.string().uuid() });
+
+export async function revokeTeamInvitationAction(raw: unknown): Promise<TeamActionResult<{ invitationId: string }>> {
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
+  let scope;
+  try { scope = requireTenant(context); } catch {
+    return { ok: false, error: "Choose an active workspace first", code: "NO_TENANT" };
+  }
+  if (!hasMinimumRole(scope.membership, "admin")) {
+    return { ok: false, error: "Only workspace owners and admins can revoke invitations", code: "FORBIDDEN" };
+  }
+  const parsed = revokeInvitationSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Invalid invitation", code: "VALIDATION" };
+
+  try {
+    const invitation = await queryOne<{ id: string; role: string }>(
+      `UPDATE tenant_invitations
+          SET status = 'revoked', updated_at = now()
+        WHERE id = $1 AND tenant_id = $2 AND status = 'pending'
+        RETURNING id, role`,
+      [parsed.data.invitationId, scope.tenant.id]
+    );
+    if (!invitation) return { ok: false, error: "Pending invitation not found in this workspace", code: "NOT_FOUND" };
+    if (invitation.role === "admin" && scope.membership.role !== "owner") {
+      // Restore it: admins cannot revoke owner-issued administrator access.
+      await query(
+        "UPDATE tenant_invitations SET status = 'pending', updated_at = now() WHERE id = $1 AND tenant_id = $2",
+        [invitation.id, scope.tenant.id]
+      );
+      return { ok: false, error: "Only the workspace owner can revoke an administrator invitation", code: "FORBIDDEN" };
+    }
+    return { ok: true, data: { invitationId: invitation.id } };
+  } catch (error) {
+    console.error("[revokeTeamInvitationAction]", error);
+    return { ok: false, error: "Unable to revoke invitation", code: "SERVER" };
+  }
+}
