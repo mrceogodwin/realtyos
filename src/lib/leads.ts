@@ -132,3 +132,21 @@ export async function countLeadsByStatus(
   }
   return result;
 }
+
+export async function updateLeadWorkflow(
+  tenantId: string,
+  leadId: string,
+  input: { status: LeadStatus; assignedAgentId: string | null; followUpAt: string | null },
+  actorId: string
+): Promise<Lead | null> {
+  return queryOne<Lead>(
+    `UPDATE leads
+        SET status = $1,
+            assigned_agent_id = $2,
+            follow_up_at = $3,
+            updated_at = now()
+      WHERE id = $4 AND tenant_id = $5
+      RETURNING *`,
+    [input.status, input.assignedAgentId, input.followUpAt, leadId, tenantId]
+  );
+}
