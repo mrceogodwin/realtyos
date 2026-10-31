@@ -200,24 +200,29 @@ export async function revokeTeamInvitationAction(raw: unknown): Promise<TeamActi
   if (!parsed.success) return { ok: false, error: "Invalid invitation", code: "VALIDATION" };
 
   try {
-    const invitation = await queryOne<{ id: string; role: string }>(
-      `UPDATE tenant_invitations
-          SET status = 'revoked', updated_at = now()
-        WHERE id = $1 AND tenant_id = $2 AND status = 'pending'
-        RETURNING id, role`,
-      [parsed.data.invitationId, scope.tenant.id]
-    );
-    if (!invitation) return { ok: false, error: "Pending invitation not found in this workspace", code: "NOT_FOUND" };
-    if (invitation.role === "admin" && scope.membership.role !== "owner") {
-      // Restore it: admins cannot revoke owner-issued administrator access.
-      await query(
-        "UPDATE tenant_invitations SET status = 'pending', updated_at = now() WHERE id = $1 AND tenant_id = $2",
-        [invitation.id, scope.tenant.id]
+    const invitationId = await withTransaction(async (client) => {
+      const found = await client.query<{ id: string; role: string }>(
+        `SELECT id, role FROM tenant_invitations
+          WHERE id = $1 AND tenant_id = $2 AND status = 'pending'
+          FOR UPDATE`,
+        [parsed.data.invitationId, scope.tenant.id]
       );
-      return { ok: false, error: "Only the workspace owner can revoke an administrator invitation", code: "FORBIDDEN" };
-    }
-    return { ok: true, data: { invitationId: invitation.id } };
+      const invitation = found.rows[0];
+      if (!invitation) throw new Error("INVITATION_NOT_FOUND");
+      if (invitation.role === "admin" && scope.membership.role !== "owner") {
+        throw new Error("OWNER_REQUIRED");
+      }
+      await client.query(
+        "UPDATE tenant_invitations SET status = 'revoked', updated_at = now() WHERE id = $1",
+        [invitation.id]
+      );
+      return invitation.id;
+    });
+    return { ok: true, data: { invitationId } };
   } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    if (code === "INVITATION_NOT_FOUND") return { ok: false, error: "Pending invitation not found in this workspace", code };
+    if (code === "OWNER_REQUIRED") return { ok: false, error: "Only the workspace owner can revoke an administrator invitation", code };
     console.error("[revokeTeamInvitationAction]", error);
     return { ok: false, error: "Unable to revoke invitation", code: "SERVER" };
   }
