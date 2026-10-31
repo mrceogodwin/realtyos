@@ -24,6 +24,7 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
   const [pending, startTransition] = useTransition();
   const propertyNames = useMemo(() => new Map(properties.map((property) => [property.id, property.title])), [properties]);
   const leadNames = useMemo(() => new Map(leads.map((lead) => [lead.id, lead.full_name])), [leads]);
+  const agentNames = useMemo(() => new Map(agents.map((agent) => [agent.user_id, agent.full_name || agent.email])), [agents]);
   const rows = useMemo(() => viewings.filter((viewing) => filter === "all" || viewing.status === filter).sort((a,b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()), [viewings, filter]);
   const calendarDays = useMemo(() => {
     const start = new Date();
@@ -102,6 +103,7 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
               <strong>{new Date(item.scheduled_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</strong>
               <span>{propertyNames.get(item.property_id) || "Property viewing"}</span>
               <small>{item.visitor_name}</small>
+              {item.agent_id && <small>Agent: {agentNames.get(item.agent_id) || "Assigned agent"}</small>}
               <span className={"lead-status status-" + item.status}>{labels[item.status] || item.status}</span>
             </article>) : <p className="viewing-calendar-empty">No viewings</p>}
           </section>)}
@@ -113,7 +115,7 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
               <div className="date-tile"><span>{date.toLocaleDateString("en-NG", { month: "short" }).toUpperCase()}</span><strong>{date.getDate()}</strong></div>
               <div className="viewing-main">
                 <div className="lead-title-line"><h3>{propertyNames.get(viewing.property_id) || "Property listing"}</h3><span className={"lead-status status-" + viewing.status}>{labels[viewing.status] || viewing.status}</span></div>
-                <div className="lead-meta"><span>{viewing.visitor_name}</span>{viewing.lead_id && <span>· {leadNames.get(viewing.lead_id) || "Linked lead"}</span>}</div>
+                <div className="lead-meta"><span>{viewing.visitor_name}</span>{viewing.lead_id && <span>· {leadNames.get(viewing.lead_id) || "Linked lead"}</span>}{viewing.agent_id && <span>· Agent: {agentNames.get(viewing.agent_id) || "Assigned agent"}</span>}</div>
                 <div className="lead-meta"><span><Clock3 size={12} /> {date.toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}</span><span><MapPin size={12} /> {viewing.duration_minutes} minutes</span></div>
                 {activities.filter((activity) => activity.viewing_id === viewing.id).slice(0, 3).length > 0 && <div className="lead-meta" aria-label="Recent viewing activity">{activities.filter((activity) => activity.viewing_id === viewing.id).slice(0, 3).map((activity) => <span key={activity.id}>{activity.action === "viewing.scheduled" ? "Scheduled" : "Status updated"} · {new Date(activity.created_at).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}{activity.actor_name ? ` by ${activity.actor_name}` : ""}</span>)}</div>}
               </div>
