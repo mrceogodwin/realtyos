@@ -20,6 +20,15 @@ export type ActionResult<
   | { ok: true; data: T }
   | { ok: false; error: string; code?: string };
 
+async function recordViewingActivitySafely(tenantId: string, actorId: string, viewingId: string, action: string, metadata: Record<string, unknown>) {
+  try {
+    await recordViewingActivity(tenantId, actorId, viewingId, action, metadata);
+  } catch (error) {
+    // The viewing mutation has already committed; do not report it as failed because audit logging failed.
+    console.error("[viewing activity log]", error);
+  }
+}
+
 export async function createViewingAction(
   raw: unknown
 ): Promise<ActionResult> {
@@ -42,7 +51,7 @@ export async function createViewingAction(
 
   try {
     const viewing = await insertViewing(scope.tenant.id, parsed.data, scope.user.id);
-    await recordViewingActivity(scope.tenant.id, scope.user.id, viewing.id, "viewing.scheduled", { propertyId: viewing.property_id, scheduledAt: viewing.scheduled_at });
+    await recordViewingActivitySafely(scope.tenant.id, scope.user.id, viewing.id, "viewing.scheduled", { propertyId: viewing.property_id, scheduledAt: viewing.scheduled_at });
     revalidatePath("/app/viewings");
     revalidatePath("/app");
     return { ok: true, data: viewing };
@@ -84,7 +93,7 @@ export async function updateViewingStatusAction(
         code: "NOT_FOUND",
       };
     }
-    await recordViewingActivity(scope.tenant.id, scope.user.id, viewing.id, "viewing.status_changed", { status: parsed.data.status });
+    await recordViewingActivitySafely(scope.tenant.id, scope.user.id, viewing.id, "viewing.status_changed", { status: parsed.data.status });
     revalidatePath("/app/viewings");
     return { ok: true, data: viewing };
   } catch (err) {
@@ -113,7 +122,7 @@ export async function rescheduleViewingAction(raw: unknown): Promise<ActionResul
   try {
     const viewing = await rescheduleViewing(scope.tenant.id, parsed.data.viewingId, parsed.data.scheduledAt, parsed.data.durationMinutes);
     if (!viewing) return { ok: false, error: "Viewing not found in this workspace", code: "NOT_FOUND" };
-    await recordViewingActivity(scope.tenant.id, scope.user.id, viewing.id, "viewing.rescheduled", { scheduledAt: viewing.scheduled_at, durationMinutes: viewing.duration_minutes });
+    await recordViewingActivitySafely(scope.tenant.id, scope.user.id, viewing.id, "viewing.rescheduled", { scheduledAt: viewing.scheduled_at, durationMinutes: viewing.duration_minutes });
     revalidatePath("/app/viewings");
     revalidatePath("/app");
     return { ok: true, data: viewing };
