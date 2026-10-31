@@ -8,6 +8,7 @@ import {
   recordViewingActivity,
   rescheduleViewing,
   ViewingConflictError,
+  ViewingStatusTransitionError,
 } from "@/lib/viewings";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import type { PropertyViewing, ViewingStatus } from "@/lib/types";
@@ -97,6 +98,7 @@ export async function updateViewingStatusAction(
     revalidatePath("/app/viewings");
     return { ok: true, data: viewing };
   } catch (err) {
+    if (err instanceof ViewingStatusTransitionError) return { ok: false, error: err.message, code: "INVALID_STATUS_TRANSITION" };
     if (err instanceof DatabaseNotConfiguredError) {
       return {
         ok: false,
