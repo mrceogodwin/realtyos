@@ -47,6 +47,7 @@ export async function createViewingAction(
     revalidatePath("/app");
     return { ok: true, data: viewing };
   } catch (err) {
+    if (err instanceof ViewingConflictError) return { ok: false, error: err.message, code: "SCHEDULE_CONFLICT" };
     if (err instanceof DatabaseNotConfiguredError) {
       return {
         ok: false,
