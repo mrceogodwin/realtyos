@@ -136,8 +136,7 @@ export async function countLeadsByStatus(
 export async function updateLeadWorkflow(
   tenantId: string,
   leadId: string,
-  input: { status: LeadStatus; assignedAgentId: string | null; followUpAt: string | null },
-  actorId: string
+  input: { status: LeadStatus; assignedAgentId: string | null; followUpAt: string | null }
 ): Promise<Lead | null> {
   return queryOne<Lead>(
     `UPDATE leads
