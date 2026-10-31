@@ -1,10 +1,12 @@
 "use server";
 
+import { createHmac } from "node:crypto";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { getTenantBySlug, getTenantSettings } from "@/lib/tenants";
 import { getPropertyBySlug } from "@/lib/properties";
 import { createLead } from "@/lib/leads";
-import { DatabaseNotConfiguredError } from "@/lib/db";
+import { DatabaseNotConfiguredError, queryOne } from "@/lib/db";
 
 export type ActionResult<
   T = unknown
@@ -19,6 +21,7 @@ const enquirySchema = z.object({
   email: z.string().email().optional().nullable().or(z.literal("")),
   phone: z.string().max(30).optional().nullable().or(z.literal("")),
   notes: z.string().max(2000).optional().nullable().or(z.literal("")),
+  website_url: z.string().max(500).optional().nullable().or(z.literal("")),
 });
 
 /**
@@ -56,6 +59,37 @@ export async function createPublicEnquiryAction(
         error: "This agency workspace is not available.",
         code: "TENANT_NOT_FOUND",
       };
+    }
+
+    const requestHeaders = await headers();
+    const forwardedFor = requestHeaders.get("x-forwarded-for");
+    const clientIp = requestHeaders.get("x-real-ip") || forwardedFor?.split(",")[0]?.trim() || "unknown";
+    const rateLimitSecret = process.env.REALTYOS_RATE_LIMIT_SECRET || process.env.AUTH_SECRET;
+    if (!rateLimitSecret) {
+      console.error("[createPublicEnquiryAction] Rate-limit secret is not configured");
+      return { ok: false, error: "Enquiry service is temporarily unavailable.", code: "CONFIG" };
+    }
+    const bucketKey = createHmac("sha256", rateLimitSecret)
+      .update(`${tenant.id}:${clientIp}`)
+      .digest("hex");
+    const rateLimit = await queryOne<{ request_count: number }>(
+      `INSERT INTO public_enquiry_rate_limits (bucket_key, window_started_at, request_count, expires_at)
+       VALUES ($1, now(), 1, now() + interval '10 minutes')
+       ON CONFLICT (bucket_key) DO UPDATE
+         SET window_started_at = CASE
+               WHEN public_enquiry_rate_limits.window_started_at <= now() - interval '10 minutes' THEN now()
+               ELSE public_enquiry_rate_limits.window_started_at
+             END,
+             request_count = CASE
+               WHEN public_enquiry_rate_limits.window_started_at <= now() - interval '10 minutes' THEN 1
+               ELSE public_enquiry_rate_limits.request_count + 1
+             END,
+             expires_at = now() + interval '10 minutes'
+       RETURNING request_count`,
+      [bucketKey]
+    );
+    if (!rateLimit || Number(rateLimit.request_count) > 5) {
+      return { ok: false, error: "Too many enquiries. Please try again in a few minutes.", code: "RATE_LIMITED" };
     }
 
     const settings = await getTenantSettings(tenant.id);
