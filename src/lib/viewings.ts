@@ -146,3 +146,25 @@ export async function recordViewingActivity(tenantId: string, actorId: string, v
     [tenantId, actorId, action, viewingId, JSON.stringify(metadata)]
   );
 }
+
+
+export type ViewingActivity = {
+  id: string;
+  viewing_id: string;
+  action: string;
+  actor_name: string | null;
+  actor_email: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export async function listViewingActivities(tenantId: string, limit = 200): Promise<ViewingActivity[]> {
+  return queryMany<ViewingActivity>(
+    `SELECT a.id, a.entity_id AS viewing_id, a.action, a.metadata, a.created_at,
+            u.full_name AS actor_name, u.email AS actor_email
+       FROM audit_logs a LEFT JOIN user_profiles u ON u.id = a.actor_id
+      WHERE a.tenant_id = $1 AND a.entity_type = 'viewing'
+      ORDER BY a.created_at DESC LIMIT $2`,
+    [tenantId, Math.min(Math.max(limit, 1), 500)]
+  );
+}
