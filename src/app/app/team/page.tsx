@@ -4,6 +4,9 @@ import { AppShell } from "@/components/app-shell";
 import { getCurrentAuthContext } from "@/lib/auth";
 import { DatabaseNotConfiguredError, queryMany } from "@/lib/db";
 import { TeamInviteForm } from "@/components/team-invite-form";
+import { TeamInvitationList } from "@/components/team-invitation-list";
+
+type TeamInvitation = { id: string; email: string; role: string; expires_at: string };
 
 type TeamMember = {
   id: string;
@@ -20,6 +23,7 @@ export default async function TeamPage() {
 
   const canManage = ["owner", "admin"].includes(context.membership.role);
   let members: TeamMember[] = [];
+  let invitations: TeamInvitation[] = [];
   let databaseUnavailable = false;
   try {
     members = await queryMany<TeamMember>(
@@ -32,6 +36,12 @@ export default async function TeamPage() {
                  u.full_name NULLS LAST, u.email`,
       [context.tenant.id]
     );
+    if (canManage) {
+      invitations = await queryMany<TeamInvitation>(
+        "SELECT id, email, role, expires_at FROM tenant_invitations WHERE tenant_id = $1 AND status = 'pending' AND expires_at > now() ORDER BY created_at DESC",
+        [context.tenant.id]
+      );
+    }
   } catch (error) {
     if (error instanceof DatabaseNotConfiguredError) databaseUnavailable = true;
     else throw error;
@@ -74,7 +84,7 @@ export default async function TeamPage() {
       {canManage && (
         <section className="panel">
           <div className="panel-heading"><div><h2>Invitations</h2><p>Secure invitation creation and email delivery are not enabled yet.</p></div></div>
-          <p className="empty-state">Create a single-use invitation link for a specific email address. Links expire after seven days and require the invited person to sign in with that verified email.</p><TeamInviteForm canInviteAdmin={context.membership.role === "owner"} />
+          <p className="empty-state">Create a single-use invitation link for a specific email address. Links expire after seven days and require the invited person to sign in with that verified email.</p><TeamInvitationList invitations={invitations} /><TeamInviteForm canInviteAdmin={context.membership.role === "owner"} />
         </section>
       )}
     </AppShell>
