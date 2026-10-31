@@ -170,3 +170,39 @@ export async function countPropertiesByStatus(
   }
   return result;
 }
+
+export async function updateProperty(
+  tenantId: string,
+  propertyId: string,
+  input: CreatePropertyInput
+): Promise<Property | null> {
+  if (input.assigned_agent_id) {
+    const membership = await queryOne<{ user_id: string }>(
+      `SELECT user_id FROM tenant_memberships
+       WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'`,
+      [tenantId, input.assigned_agent_id]
+    );
+    if (!membership) throw new Error("Assigned agent is not an active member of this workspace");
+  }
+
+  return queryOne<Property>(
+    `UPDATE properties SET
+       title = $1, slug = $2, description = $3, listing_type = $4,
+       property_type_id = $5, price = $6, currency = $7, price_period = $8,
+       bedrooms = $9, bathrooms = $10, toilets = $11, parking_spaces = $12,
+       area_value = $13, area_unit = $14, address = $15, city = $16,
+       state = $17, country = $18, features = $19::jsonb,
+       assigned_agent_id = $20, updated_at = now()
+     WHERE id = $21 AND tenant_id = $22
+     RETURNING *`,
+    [
+      input.title, input.slug, input.description ?? null, input.listing_type,
+      input.property_type_id ?? null, input.price, input.currency ?? "NGN",
+      input.price_period ?? null, input.bedrooms ?? null, input.bathrooms ?? null,
+      input.toilets ?? null, input.parking_spaces ?? null, input.area_value ?? null,
+      input.area_unit ?? null, input.address ?? null, input.city ?? null,
+      input.state ?? null, input.country ?? "NG", JSON.stringify(input.features ?? []),
+      input.assigned_agent_id ?? null, propertyId, tenantId,
+    ]
+  );
+}
