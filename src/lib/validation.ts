@@ -85,3 +85,10 @@ export const updateViewingStatusSchema = z.object({
   viewingId: z.string().uuid(),
   status: z.enum(["requested", "confirmed", "rescheduled", "completed", "cancelled", "no_show"]),
 });
+
+
+export const rescheduleViewingSchema = z.object({
+  viewingId: z.string().uuid(),
+  scheduledAt: z.string().datetime(),
+  durationMinutes: z.number().int().min(15).max(480),
+});
