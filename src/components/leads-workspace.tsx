@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { createLeadAction, updateLeadStatusAction, updateLeadWorkflowAction } from "@/app/actions/leads";
 import type { Lead, LeadStatus } from "@/lib/types";
+import type { LeadActivity } from "@/lib/leads";
 
 function toLocalDateTimeInput(value: string | null | undefined): string {
   if (!value) return "";
@@ -18,7 +19,7 @@ const labels: Record<string, string> = { new: "New", contacted: "Contacted", qua
 
 type AgentOption = { user_id: string; full_name: string | null; email: string };
 
-export function LeadsWorkspace({ initialLeads, agents }: { initialLeads: Lead[]; agents: AgentOption[] }) {
+export function LeadsWorkspace({ initialLeads, agents, activities }: { initialLeads: Lead[]; agents: AgentOption[]; activities: LeadActivity[] }) {
   const [leads, setLeads] = useState(initialLeads);
   const [query, setQuery] = useState("");
   const [stage, setStage] = useState<LeadStatus | "all">("all");
@@ -102,6 +103,7 @@ export function LeadsWorkspace({ initialLeads, agents }: { initialLeads: Lead[];
                 <button type="button" className="secondary-button" disabled={pending} onClick={() => saveWorkflow(lead)}>Save</button>
               </div>
               <select aria-label={"Update status for " + lead.full_name} value={lead.status} disabled={pending} onChange={(event) => changeStatus(lead.id, event.target.value as LeadStatus)}>{stages.filter((item): item is LeadStatus => item !== "all").map((item) => <option key={item} value={item}>{labels[item]}</option>)}</select>
+              <details className="lead-activity"><summary>Activity ({activities.filter((activity) => activity.lead_id === lead.id).length})</summary><ol>{activities.filter((activity) => activity.lead_id === lead.id).map((activity) => <li key={activity.id}><strong>{activity.action.replace("lead.", "").replaceAll("_", " ")}</strong><span>{activity.actor_name || activity.actor_email || "Workspace member"} · {new Date(activity.created_at).toLocaleString()}</span></li>)}</ol></details>
             </article>
           ))}
           {rows.length === 0 && <div className="empty-state"><Search size={22} /><strong>{leads.length ? "No leads match" : "No leads yet"}</strong><span>{leads.length ? "Try another search or stage." : "Add your first client lead to start the pipeline."}</span></div>}
