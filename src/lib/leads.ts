@@ -140,7 +140,7 @@ export async function updateLeadWorkflow(
 ): Promise<Lead | null> {
   if (input.assignedAgentId) {
     const membership = await queryOne<{ user_id: string }>(
-      "SELECT user_id FROM tenant_memberships WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'",
+      "SELECT user_id FROM tenant_memberships WHERE tenant_id = $1 AND user_id = $2 AND status = 'active' AND role IN ('agent', 'admin', 'owner')",
       [tenantId, input.assignedAgentId]
     );
     if (!membership) throw new Error("Assigned agent is not an active member of this workspace");
