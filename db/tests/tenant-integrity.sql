@@ -7,7 +7,7 @@ DECLARE
   user_c UUID := gen_random_uuid();
   property_a UUID := gen_random_uuid();
   lead_a UUID := gen_random_uuid();
-  rate_key TEXT := encode(gen_random_bytes(32), 'hex');
+  rate_key TEXT := md5(random()::text || clock_timestamp()::text);
   rate_count INTEGER;
 BEGIN
   INSERT INTO tenants (id, name, slug) VALUES
