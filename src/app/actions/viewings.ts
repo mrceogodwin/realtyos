@@ -5,6 +5,7 @@ import { createViewingSchema, updateViewingStatusSchema } from "@/lib/validation
 import {
   createViewing as insertViewing,
   updateViewingStatus,
+  recordViewingActivity,
 } from "@/lib/viewings";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import type { ViewingStatus } from "@/lib/types";
@@ -37,6 +38,7 @@ export async function createViewingAction(
 
   try {
     const viewing = await insertViewing(scope.tenant.id, parsed.data, scope.user.id);
+    await recordViewingActivity(scope.tenant.id, scope.user.id, viewing.id, "viewing.scheduled", { propertyId: viewing.property_id, scheduledAt: viewing.scheduled_at });
     revalidatePath("/app/viewings");
     revalidatePath("/app");
     return { ok: true, data: viewing };
@@ -77,6 +79,7 @@ export async function updateViewingStatusAction(
         code: "NOT_FOUND",
       };
     }
+    await recordViewingActivity(scope.tenant.id, scope.user.id, viewing.id, "viewing.status_changed", { status: parsed.data.status });
     revalidatePath("/app/viewings");
     return { ok: true, data: viewing };
   } catch (err) {
