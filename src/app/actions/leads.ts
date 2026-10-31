@@ -122,3 +122,25 @@ export async function updateLeadWorkflowAction(raw: unknown): Promise<ActionResu
     return { ok: false, error: "Could not update lead workflow", code: "SERVER" };
   }
 }
+
+
+const leadNoteSchema = z.object({ leadId: z.string().uuid(), note: z.string().trim().min(1).max(5000) });
+
+export async function addLeadNoteAction(raw: unknown): Promise<ActionResult> {
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
+  let scope;
+  try { scope = requireTenant(context); } catch { return { ok: false, error: "Active workspace required", code: "NO_TENANT" }; }
+  if (!hasMinimumRole(scope.membership, "agent")) return { ok: false, error: "Insufficient permissions", code: "FORBIDDEN" };
+  const parsed = leadNoteSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Enter a note of up to 5,000 characters.", code: "VALIDATION" };
+  try {
+    await recordLeadActivity(scope.tenant.id, scope.user.id, parsed.data.leadId, "lead.note_added", { note: parsed.data.note });
+    revalidatePath("/app/leads");
+    return { ok: true, data: { saved: true } };
+  } catch (error) {
+    if (error instanceof DatabaseNotConfiguredError) return { ok: false, error: "Database is not configured yet.", code: "DB_NOT_CONFIGURED" };
+    console.error("[addLeadNoteAction]", error);
+    return { ok: false, error: "Could not save lead note", code: "SERVER" };
+  }
+}
