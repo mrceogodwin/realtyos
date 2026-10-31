@@ -98,7 +98,7 @@ export function LeadsWorkspace({ initialLeads, agents, activities }: { initialLe
                 <div className="lead-meta"><span>{lead.source.replace("_", " ")}</span>{lead.preferred_location && <span>· {lead.preferred_location}</span>}<span>Added {new Date(lead.created_at).toLocaleDateString()}</span></div>
               </div>
               <div className="lead-workflow-controls">
-                <label>Follow-up <input type="datetime-local" aria-label={"Follow-up for " + lead.full_name} value={followUps[lead.id] ?? (lead.follow_up_at ? new Date(lead.follow_up_at).toISOString().slice(0, 16) : "")} onChange={(event) => setFollowUps((current) => ({ ...current, [lead.id]: event.target.value }))} /></label>
+                <label>Follow-up <input type="datetime-local" aria-label={"Follow-up for " + lead.full_name} value={followUps[lead.id] ?? (lead.follow_up_at ? toLocalDateTimeInput(lead.follow_up_at) : "")} onChange={(event) => setFollowUps((current) => ({ ...current, [lead.id]: event.target.value }))} /></label>
                 <label>Assigned to <select aria-label={"Assign " + lead.full_name} value={assignments[lead.id] ?? lead.assigned_agent_id ?? ""} onChange={(event) => setAssignments((current) => ({ ...current, [lead.id]: event.target.value }))}><option value="">Unassigned</option>{agents.map((agent) => <option key={agent.user_id} value={agent.user_id}>{agent.full_name || agent.email}</option>)}</select></label>
                 <button type="button" className="secondary-button" disabled={pending} onClick={() => saveWorkflow(lead)}>Save</button>
               </div>
