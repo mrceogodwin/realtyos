@@ -1,4 +1,5 @@
 import { query, queryMany, queryOne, withTransaction } from "./db";
+import type { PoolClient } from "pg";
 import type { PropertyViewing, ViewingStatus } from "./types";
 import type { CreateViewingInput } from "./validation";
 
@@ -71,6 +72,30 @@ export async function getViewingById(
   );
 }
 
+async function enqueueViewingReminders(client: PoolClient, tenantId: string, viewing: PropertyViewing): Promise<void> {
+  // Only store actual recipients. A visitor and the assigned agent can each receive
+  // both reminder windows; the unique key makes retries safe.
+  await client.query(
+    `INSERT INTO viewing_reminder_deliveries (
+       tenant_id, viewing_id, recipient_email, recipient_name,
+       reminder_type, scheduled_for, next_attempt_at
+     )
+     SELECT $1, $2, recipients.email, recipients.name, reminder.type,
+            GREATEST($3::timestamptz - reminder.lead_time, now()),
+            GREATEST($3::timestamptz - reminder.lead_time, now())
+       FROM (
+         SELECT NULLIF(trim($4::text), '') AS email, NULLIF(trim($5::text), '') AS name
+         UNION
+         SELECT NULLIF(trim(u.email), ''), NULLIF(trim(u.full_name), '')
+           FROM user_profiles u WHERE u.id = $6::uuid
+       ) recipients
+       CROSS JOIN (VALUES ('24h', interval '24 hours'), ('1h', interval '1 hour')) reminder(type, lead_time)
+      WHERE recipients.email IS NOT NULL
+     ON CONFLICT (viewing_id, recipient_email, reminder_type, scheduled_for) DO NOTHING`,
+    [tenantId, viewing.id, viewing.scheduled_at, viewing.visitor_email, viewing.visitor_name, viewing.agent_id]
+  );
+}
+
 export async function createViewing(
   tenantId: string,
   input: CreateViewingInput,
@@ -113,7 +138,9 @@ export async function createViewing(
        input.visitor_name, input.visitor_email ?? null, input.visitor_phone ?? null,
        input.scheduled_at, duration, input.notes ?? null, createdBy ?? null]
     );
-    return result.rows[0];
+    const viewing = result.rows[0];
+    await enqueueViewingReminders(client, tenantId, viewing);
+    return viewing;
   });
 }
 
@@ -148,6 +175,15 @@ export async function updateViewingStatus(
     if (current.status === status) return current;
     if (!allowedViewingTransitions[current.status].includes(status)) {
       throw new ViewingStatusTransitionError();
+    }
+    if (["cancelled", "completed", "no_show"].includes(status)) {
+      await client.query(
+        `UPDATE viewing_reminder_deliveries
+            SET status = 'cancelled', updated_at = now()
+          WHERE tenant_id = $1 AND viewing_id = $2
+            AND status IN ('pending', 'failed')`,
+        [tenantId, viewingId]
+      );
     }
     const updated = await client.query<PropertyViewing>(
       `UPDATE property_viewings SET status = $1, updated_at = now()
@@ -219,6 +255,17 @@ export async function rescheduleViewing(tenantId: string, viewingId: string, sch
         WHERE id = $3 AND tenant_id = $4 RETURNING *`,
       [scheduledAt, durationMinutes, viewingId, tenantId]
     );
-    return updated.rows[0] ?? null;
+    const rescheduled = updated.rows[0] ?? null;
+    if (rescheduled) {
+      await client.query(
+        `UPDATE viewing_reminder_deliveries
+            SET status = 'cancelled', updated_at = now()
+          WHERE tenant_id = $1 AND viewing_id = $2
+            AND status IN ('pending', 'failed')`,
+        [tenantId, viewingId]
+      );
+      await enqueueViewingReminders(client, tenantId, rescheduled);
+    }
+    return rescheduled;
   });
 }
