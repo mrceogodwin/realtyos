@@ -4,7 +4,7 @@ import { getCurrentAuthContext } from "@/lib/auth";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import { listProperties } from "@/lib/properties";
 import { listLeads } from "@/lib/leads";
-import { listViewings } from "@/lib/viewings";
+import { listViewings, listViewingActivities, type ViewingActivity } from "@/lib/viewings";
 import type { Property, Lead, PropertyViewing } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -15,13 +15,15 @@ export default async function ViewingsPage() {
   let viewings: PropertyViewing[] = [];
   let properties: Property[] = [];
   let leads: Lead[] = [];
+  let activities: ViewingActivity[] = [];
   let databaseUnavailable = false;
   try {
     const tenantId = context.tenant.id;
-    [viewings, properties, leads] = await Promise.all([
+    [viewings, properties, leads, activities] = await Promise.all([
       listViewings({ tenantId, limit: 100 }),
       listProperties({ tenantId, limit: 100 }),
       listLeads({ tenantId, limit: 100 }),
+      listViewingActivities(tenantId, 200),
     ]);
   } catch (error) {
     if (error instanceof DatabaseNotConfiguredError) databaseUnavailable = true;
@@ -32,7 +34,7 @@ export default async function ViewingsPage() {
     <AppShell title="Viewings" subtitle={`Viewing appointments for ${context.tenant.name}.`}>
       {databaseUnavailable
         ? <section className="panel"><div className="empty-state"><strong>Database connection required</strong><span>Viewing appointments will appear here when the workspace database is configured.</span></div></section>
-        : <ViewingsWorkspace initialViewings={viewings} properties={properties} leads={leads} />}
+        : <ViewingsWorkspace initialViewings={viewings} properties={properties} leads={leads} activities={activities} />}
     </AppShell>
   );
 }
