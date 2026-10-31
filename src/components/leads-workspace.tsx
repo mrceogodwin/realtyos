@@ -107,6 +107,7 @@ export function LeadsWorkspace({ initialLeads, agents, activities }: { initialLe
                 <div className="lead-title-line"><h3>{lead.full_name}</h3><span className={"lead-status status-" + lead.status}>{labels[lead.status] || lead.status}</span></div>
                 <div className="lead-meta"><span>{lead.email || "No email"}</span><span>·</span><span>{lead.phone || "No phone"}</span></div>
                 <div className="lead-meta"><span>{lead.source.replace("_", " ")}</span>{lead.preferred_location && <span>· {lead.preferred_location}</span>}<span>Added {new Date(lead.created_at).toLocaleDateString()}</span></div>
+                {lead.follow_up_at && <div className="lead-meta"><span>{new Date(lead.follow_up_at).getTime() < Date.now() && !["won", "lost", "spam"].includes(lead.status) ? "Overdue follow-up" : "Next follow-up"} · {new Date(lead.follow_up_at).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}</span></div>}
               </div>
               <div className="lead-workflow-controls">
                 <label>Follow-up <input type="datetime-local" aria-label={"Follow-up for " + lead.full_name} value={followUps[lead.id] ?? (lead.follow_up_at ? toLocalDateTimeInput(lead.follow_up_at) : "")} onChange={(event) => setFollowUps((current) => ({ ...current, [lead.id]: event.target.value }))} /></label>
