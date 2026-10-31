@@ -10,7 +10,7 @@ import {
   ViewingConflictError,
 } from "@/lib/viewings";
 import { DatabaseNotConfiguredError } from "@/lib/db";
-import type { ViewingStatus } from "@/lib/types";
+import type { PropertyViewing, ViewingStatus } from "@/lib/types";
 import { getCurrentAuthContext, requireTenant } from "@/lib/auth";
 import { hasMinimumRole } from "@/lib/tenant";
 
@@ -98,7 +98,7 @@ export async function updateViewingStatusAction(
 }
 
 
-export async function rescheduleViewingAction(raw: unknown): Promise<ActionResult> {
+export async function rescheduleViewingAction(raw: unknown): Promise<ActionResult<PropertyViewing>> {
   const parsed = rescheduleViewingSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid rescheduling details", code: "VALIDATION" };
   const context = await getCurrentAuthContext();
