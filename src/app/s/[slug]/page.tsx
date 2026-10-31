@@ -31,7 +31,7 @@ export default async function PublicTenantSitePage({ params }: Props) {
     }
   }
 
-  const name = tenant?.name ?? formatSlug(slug);
+  if (tenant && !dbError && settings?.published !== true) {\n    return (\n      <main className="auth-shell">\n        <section className="auth-card">\n          <div className="brand-name">realty<span>OS</span></div>\n          <h1>Website not published</h1>\n          <p className="auth-subtitle">This agency has not made its public website available yet.</p>\n        </section>\n      </main>\n    );\n  }\n\n  const name = tenant?.name ?? formatSlug(slug);
   const primary = branding?.primary_color ?? "#12634b";
   const accent = branding?.accent_color ?? "#c6a36b";
   const heroTitle =
