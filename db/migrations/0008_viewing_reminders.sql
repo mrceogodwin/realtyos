@@ -1,5 +1,9 @@
 BEGIN;
 
+-- Required target key for the composite tenant-scoped reminder foreign key.
+ALTER TABLE property_viewings
+  ADD CONSTRAINT property_viewings_tenant_id_id_unique UNIQUE (tenant_id, id);
+
 CREATE TABLE IF NOT EXISTS viewing_reminder_deliveries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
