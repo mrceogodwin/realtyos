@@ -156,3 +156,34 @@ export async function updateLeadWorkflow(
     [input.status, input.assignedAgentId, input.followUpAt, leadId, tenantId]
   );
 }
+
+
+export type LeadActivity = {
+  id: string;
+  lead_id: string;
+  action: string;
+  actor_name: string | null;
+  actor_email: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
+export async function listLeadActivities(tenantId: string, limit = 200): Promise<LeadActivity[]> {
+  return queryMany<LeadActivity>(
+    `SELECT a.id, a.entity_id AS lead_id, a.action, a.metadata, a.created_at,
+            u.full_name AS actor_name, u.email AS actor_email
+       FROM audit_logs a LEFT JOIN user_profiles u ON u.id = a.actor_id
+      WHERE a.tenant_id = $1 AND a.entity_type = 'lead'
+      ORDER BY a.created_at DESC LIMIT $2`,
+    [tenantId, Math.min(Math.max(limit, 1), 500)]
+  );
+}
+
+export async function recordLeadActivity(tenantId: string, actorId: string, leadId: string, action: string, metadata: Record<string, unknown> = {}): Promise<void> {
+  await query(
+    `INSERT INTO audit_logs (tenant_id, actor_id, action, entity_type, entity_id, metadata)
+     SELECT $1, $2, $3, 'lead', $4, $5::jsonb
+      WHERE EXISTS (SELECT 1 FROM leads WHERE id = $4 AND tenant_id = $1)`,
+    [tenantId, actorId, action, leadId, JSON.stringify(metadata)]
+  );
+}
