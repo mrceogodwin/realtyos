@@ -67,9 +67,10 @@ export async function saveBrandingAction(raw: unknown): Promise<ActionResult> {
           seo_description = COALESCE($3, seo_description),
           custom_domain = CASE WHEN $4::text IS DISTINCT FROM custom_domain THEN $4 ELSE custom_domain END,
           domain_verified = CASE WHEN $4::text IS DISTINCT FROM custom_domain THEN false ELSE domain_verified END,
+          published = COALESCE($5, published),
           updated_at = now()
          WHERE tenant_id = $1 RETURNING *`,
-        [scope.tenant.id, seo_title, seo_description, custom_domain]
+        [scope.tenant.id, seo_title, seo_description, custom_domain, published]
       );
       if (!branding.rowCount || !settings.rowCount) throw new Error("WORKSPACE_BRANDING_NOT_INITIALIZED");
       return { branding: branding.rows[0], settings: settings.rows[0] };
