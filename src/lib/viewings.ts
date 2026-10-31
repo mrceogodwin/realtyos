@@ -76,51 +76,45 @@ export async function createViewing(
   input: CreateViewingInput,
   createdBy?: string | null
 ): Promise<PropertyViewing> {
-  const property = await queryOne<{ id: string }>(
-    "SELECT id FROM properties WHERE id = $1 AND tenant_id = $2",
-    [input.property_id, tenantId]
-  );
-  if (!property) throw new Error("Property does not belong to this workspace");
-
-  if (input.lead_id) {
-    const lead = await queryOne<{ id: string }>(
-      "SELECT id FROM leads WHERE id = $1 AND tenant_id = $2",
-      [input.lead_id, tenantId]
+  return withTransaction(async (client) => {
+    // Serialize workspace appointment writes before checking overlaps.
+    await client.query("SELECT id FROM tenants WHERE id = $1 FOR UPDATE", [tenantId]);
+    const property = await client.query("SELECT id FROM properties WHERE id = $1 AND tenant_id = $2", [input.property_id, tenantId]);
+    if (!property.rowCount) throw new Error("Property does not belong to this workspace");
+    if (input.lead_id) {
+      const lead = await client.query("SELECT id FROM leads WHERE id = $1 AND tenant_id = $2", [input.lead_id, tenantId]);
+      if (!lead.rowCount) throw new Error("Lead does not belong to this workspace");
+    }
+    if (input.agent_id) {
+      const membership = await client.query(
+        "SELECT user_id FROM tenant_memberships WHERE tenant_id = $1 AND user_id = $2 AND status = 'active' AND role IN ('agent', 'admin', 'owner')",
+        [tenantId, input.agent_id]
+      );
+      if (!membership.rowCount) throw new Error("Assigned agent is not an active member of this workspace");
+    }
+    const duration = input.duration_minutes ?? 60;
+    const conflict = await client.query(
+      `SELECT id FROM property_viewings
+        WHERE tenant_id = $1 AND status NOT IN ('cancelled', 'completed', 'no_show')
+          AND (property_id = $2 OR ($3::uuid IS NOT NULL AND agent_id = $3))
+          AND scheduled_at < ($4::timestamptz + ($5::int * interval '1 minute'))
+          AND (scheduled_at + (duration_minutes * interval '1 minute')) > $4::timestamptz
+        LIMIT 1`,
+      [tenantId, input.property_id, input.agent_id ?? null, input.scheduled_at, duration]
     );
-    if (!lead) throw new Error("Lead does not belong to this workspace");
-  }
-
-  if (input.agent_id) {
-    const membership = await queryOne<{ user_id: string }>(
-      `SELECT user_id FROM tenant_memberships
-       WHERE tenant_id = $1 AND user_id = $2 AND status = 'active' AND role IN ('agent', 'admin', 'owner')`,
-      [tenantId, input.agent_id]
+    if (conflict.rowCount) throw new ViewingConflictError();
+    const result = await client.query<PropertyViewing>(
+      `INSERT INTO property_viewings (
+        tenant_id, property_id, lead_id, agent_id,
+        visitor_name, visitor_email, visitor_phone,
+        scheduled_at, duration_minutes, notes, created_by
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      [tenantId, input.property_id, input.lead_id ?? null, input.agent_id ?? null,
+       input.visitor_name, input.visitor_email ?? null, input.visitor_phone ?? null,
+       input.scheduled_at, duration, input.notes ?? null, createdBy ?? null]
     );
-    if (!membership) throw new Error("Assigned agent is not an active member of this workspace");
-  }
-
-  const result = await query<PropertyViewing>(
-    `INSERT INTO property_viewings (
-      tenant_id, property_id, lead_id, agent_id,
-      visitor_name, visitor_email, visitor_phone,
-      scheduled_at, duration_minutes, notes, created_by
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-    RETURNING *`,
-    [
-      tenantId,
-      input.property_id,
-      input.lead_id ?? null,
-      input.agent_id ?? null,
-      input.visitor_name,
-      input.visitor_email ?? null,
-      input.visitor_phone ?? null,
-      input.scheduled_at,
-      input.duration_minutes ?? 60,
-      input.notes ?? null,
-      createdBy ?? null,
-    ]
-  );
-  return result.rows[0];
+    return result.rows[0];
+  });
 }
 
 export async function updateViewingStatus(
