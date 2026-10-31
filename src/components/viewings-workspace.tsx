@@ -11,7 +11,9 @@ function toLocalDateTimeInput(value: string): string { const date = new Date(val
 
 const labels: Record<string, string> = { requested: "Requested", confirmed: "Confirmed", rescheduled: "Rescheduled", completed: "Completed", cancelled: "Cancelled", no_show: "No show" };
 
-export function ViewingsWorkspace({ initialViewings, properties, leads, activities }: { initialViewings: PropertyViewing[]; properties: Property[]; leads: Lead[]; activities: ViewingActivity[] }) {
+type AgentOption = { user_id: string; full_name: string | null; email: string };
+
+export function ViewingsWorkspace({ initialViewings, properties, leads, activities, agents }: { initialViewings: PropertyViewing[]; properties: Property[]; leads: Lead[]; activities: ViewingActivity[]; agents: AgentOption[] }) {
   const [viewings, setViewings] = useState(initialViewings);
   const [filter, setFilter] = useState<ViewingStatus | "all">("all");
   const [open, setOpen] = useState(false);
@@ -32,6 +34,7 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
       visitor_phone: String(formData.get("visitor_phone") || "").trim() || null,
       scheduled_at: new Date(date).toISOString(),
       duration_minutes: Number(formData.get("duration_minutes") || 60),
+      agent_id: String(formData.get("agent_id") || "") || null,
       notes: String(formData.get("notes") || "").trim() || null,
     };
     startTransition(async () => {
@@ -92,6 +95,7 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
           <form action={create}>
             <label>Property<select name="property_id" required defaultValue=""><option value="" disabled>Select property</option>{properties.map((property) => <option key={property.id} value={property.id}>{property.title}</option>)}</select></label>
             <label>Link lead (optional)<select name="lead_id" defaultValue=""><option value="">No linked lead</option>{leads.map((lead) => <option key={lead.id} value={lead.id}>{lead.full_name}</option>)}</select></label>
+            <label>Assign agent (optional)<select name="agent_id" defaultValue=""><option value="">Unassigned</option>{agents.map((agent) => <option key={agent.user_id} value={agent.user_id}>{agent.full_name || agent.email} · {agent.email}</option>)}</select></label>
             <label>Visitor name<input name="visitor_name" required minLength={2} maxLength={200} /></label>
             <div className="form-two"><label>Email<input name="visitor_email" type="email" /></label><label>Phone<input name="visitor_phone" type="tel" maxLength={30} /></label></div>
             <div className="form-two"><label>Date and time<input name="scheduled_at" type="datetime-local" required min={new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16)} /></label><label>Duration (minutes)<input name="duration_minutes" type="number" min="15" max="480" step="15" defaultValue="60" /></label></div>
