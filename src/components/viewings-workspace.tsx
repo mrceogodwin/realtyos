@@ -7,12 +7,15 @@ import type { Lead, Property, PropertyViewing, ViewingStatus } from "@/lib/types
 import type { ViewingActivity } from "@/lib/viewings";
 
 const filters: Array<ViewingStatus | "all"> = ["all", "requested", "confirmed", "rescheduled", "completed", "cancelled", "no_show"];
-function toLocalDateTimeInput(value: string): string { const date = new Date(value); const pad = (part: number) => String(part).padStart(2, "0"); return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`; }\n\nconst labels: Record<string, string> = { requested: "Requested", confirmed: "Confirmed", rescheduled: "Rescheduled", completed: "Completed", cancelled: "Cancelled", no_show: "No show" };
+function toLocalDateTimeInput(value: string): string { const date = new Date(value); const pad = (part: number) => String(part).padStart(2, "0"); return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`; }
+
+const labels: Record<string, string> = { requested: "Requested", confirmed: "Confirmed", rescheduled: "Rescheduled", completed: "Completed", cancelled: "Cancelled", no_show: "No show" };
 
 export function ViewingsWorkspace({ initialViewings, properties, leads, activities }: { initialViewings: PropertyViewing[]; properties: Property[]; leads: Lead[]; activities: ViewingActivity[] }) {
   const [viewings, setViewings] = useState(initialViewings);
   const [filter, setFilter] = useState<ViewingStatus | "all">("all");
-  const [open, setOpen] = useState(false);\n  const [rescheduleTimes, setRescheduleTimes] = useState<Record<string, string>>({});
+  const [open, setOpen] = useState(false);
+  const [rescheduleTimes, setRescheduleTimes] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const propertyNames = useMemo(() => new Map(properties.map((property) => [property.id, property.title])), [properties]);
@@ -39,7 +42,18 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
     });
   }
 
-  function reschedule(viewing: PropertyViewing) {\n    const value = rescheduleTimes[viewing.id] || toLocalDateTimeInput(viewing.scheduled_at);\n    if (!value) return;\n    startTransition(async () => {\n      const result = await rescheduleViewingAction({ viewingId: viewing.id, scheduledAt: new Date(value).toISOString(), durationMinutes: viewing.duration_minutes });\n      if (!result.ok) { setError(result.error); return; }\n      setViewings((current) => current.map((item) => item.id === viewing.id ? { ...item, scheduled_at: result.data.scheduled_at, status: "rescheduled" } : item));\n      setError("");\n    });\n  }\n\n  function changeStatus(id: string, status: ViewingStatus) {
+  function reschedule(viewing: PropertyViewing) {
+    const value = rescheduleTimes[viewing.id] || toLocalDateTimeInput(viewing.scheduled_at);
+    if (!value) return;
+    startTransition(async () => {
+      const result = await rescheduleViewingAction({ viewingId: viewing.id, scheduledAt: new Date(value).toISOString(), durationMinutes: viewing.duration_minutes });
+      if (!result.ok) { setError(result.error); return; }
+      setViewings((current) => current.map((item) => item.id === viewing.id ? { ...item, scheduled_at: result.data.scheduled_at, status: "rescheduled" } : item));
+      setError("");
+    });
+  }
+
+  function changeStatus(id: string, status: ViewingStatus) {
     startTransition(async () => {
       const result = await updateViewingStatusAction(id, status);
       if (!result.ok) { setError(result.error); return; }
@@ -65,7 +79,8 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
                 <div className="lead-meta"><span><Clock3 size={12} /> {date.toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}</span><span><MapPin size={12} /> {viewing.duration_minutes} minutes</span></div>
                 {activities.filter((activity) => activity.viewing_id === viewing.id).slice(0, 3).length > 0 && <div className="lead-meta" aria-label="Recent viewing activity">{activities.filter((activity) => activity.viewing_id === viewing.id).slice(0, 3).map((activity) => <span key={activity.id}>{activity.action === "viewing.scheduled" ? "Scheduled" : "Status updated"} · {new Date(activity.created_at).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}{activity.actor_name ? ` by ${activity.actor_name}` : ""}</span>)}</div>}
               </div>
-              {!["cancelled", "completed", "no_show"].includes(viewing.status) && <div className="viewing-reschedule-controls"><label>New time<input type="datetime-local" aria-label={"New time for " + viewing.visitor_name} value={rescheduleTimes[viewing.id] ?? toLocalDateTimeInput(viewing.scheduled_at)} onChange={(event) => setRescheduleTimes((current) => ({ ...current, [viewing.id]: event.target.value }))} /></label><button type="button" className="secondary-button" disabled={pending} onClick={() => reschedule(viewing)}>Reschedule</button></div>}\n              <select aria-label={"Update viewing status for " + viewing.visitor_name} value={viewing.status} disabled={pending} onChange={(event) => changeStatus(viewing.id, event.target.value as ViewingStatus)}>{filters.filter((item): item is ViewingStatus => item !== "all").map((item) => <option key={item} value={item}>{labels[item]}</option>)}</select>
+              {!["cancelled", "completed", "no_show"].includes(viewing.status) && <div className="viewing-reschedule-controls"><label>New time<input type="datetime-local" aria-label={"New time for " + viewing.visitor_name} value={rescheduleTimes[viewing.id] ?? toLocalDateTimeInput(viewing.scheduled_at)} onChange={(event) => setRescheduleTimes((current) => ({ ...current, [viewing.id]: event.target.value }))} /></label><button type="button" className="secondary-button" disabled={pending} onClick={() => reschedule(viewing)}>Reschedule</button></div>}
+              <select aria-label={"Update viewing status for " + viewing.visitor_name} value={viewing.status} disabled={pending} onChange={(event) => changeStatus(viewing.id, event.target.value as ViewingStatus)}>{filters.filter((item): item is ViewingStatus => item !== "all").map((item) => <option key={item} value={item}>{labels[item]}</option>)}</select>
             </article>;
           })}
           {rows.length === 0 && <div className="empty-state"><CalendarDays size={22} /><strong>{viewings.length ? "No appointments in this filter" : "No viewings scheduled"}</strong><span>{viewings.length ? "Choose another status." : "Schedule the first property viewing for this workspace."}</span></div>}
