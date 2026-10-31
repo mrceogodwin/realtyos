@@ -4,11 +4,12 @@ import { useMemo, useState, useTransition } from "react";
 import { CalendarDays, Clock3, MapPin, Plus, X } from "lucide-react";
 import { createViewingAction, updateViewingStatusAction } from "@/app/actions/viewings";
 import type { Lead, Property, PropertyViewing, ViewingStatus } from "@/lib/types";
+import type { ViewingActivity } from "@/lib/viewings";
 
 const filters: Array<ViewingStatus | "all"> = ["all", "requested", "confirmed", "rescheduled", "completed", "cancelled", "no_show"];
 const labels: Record<string, string> = { requested: "Requested", confirmed: "Confirmed", rescheduled: "Rescheduled", completed: "Completed", cancelled: "Cancelled", no_show: "No show" };
 
-export function ViewingsWorkspace({ initialViewings, properties, leads }: { initialViewings: PropertyViewing[]; properties: Property[]; leads: Lead[] }) {
+export function ViewingsWorkspace({ initialViewings, properties, leads, activities }: { initialViewings: PropertyViewing[]; properties: Property[]; leads: Lead[]; activities: ViewingActivity[] }) {
   const [viewings, setViewings] = useState(initialViewings);
   const [filter, setFilter] = useState<ViewingStatus | "all">("all");
   const [open, setOpen] = useState(false);
@@ -62,6 +63,7 @@ export function ViewingsWorkspace({ initialViewings, properties, leads }: { init
                 <div className="lead-title-line"><h3>{propertyNames.get(viewing.property_id) || "Property listing"}</h3><span className={"lead-status status-" + viewing.status}>{labels[viewing.status] || viewing.status}</span></div>
                 <div className="lead-meta"><span>{viewing.visitor_name}</span>{viewing.lead_id && <span>· {leadNames.get(viewing.lead_id) || "Linked lead"}</span>}</div>
                 <div className="lead-meta"><span><Clock3 size={12} /> {date.toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}</span><span><MapPin size={12} /> {viewing.duration_minutes} minutes</span></div>
+                {activities.filter((activity) => activity.viewing_id === viewing.id).slice(0, 3).length > 0 && <div className="lead-meta" aria-label="Recent viewing activity">{activities.filter((activity) => activity.viewing_id === viewing.id).slice(0, 3).map((activity) => <span key={activity.id}>{activity.action === "viewing.scheduled" ? "Scheduled" : "Status updated"} · {new Date(activity.created_at).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short" })}{activity.actor_name ? ` by ${activity.actor_name}` : ""}</span>)}</div>}
               </div>
               <select aria-label={"Update viewing status for " + viewing.visitor_name} value={viewing.status} disabled={pending} onChange={(event) => changeStatus(viewing.id, event.target.value as ViewingStatus)}>{filters.filter((item): item is ViewingStatus => item !== "all").map((item) => <option key={item} value={item}>{labels[item]}</option>)}</select>
             </article>;
