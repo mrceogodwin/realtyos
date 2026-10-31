@@ -2,16 +2,20 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Plus, Search, X } from "lucide-react";
-import { createLeadAction, updateLeadStatusAction } from "@/app/actions/leads";
+import { createLeadAction, updateLeadStatusAction, updateLeadWorkflowAction } from "@/app/actions/leads";
 import type { Lead, LeadStatus } from "@/lib/types";
 
 const stages: Array<LeadStatus | "all"> = ["all", "new", "contacted", "qualified", "viewing_scheduled", "negotiating", "won", "lost"];
 const labels: Record<string, string> = { new: "New", contacted: "Contacted", qualified: "Qualified", viewing_scheduled: "Viewing scheduled", negotiating: "Negotiating", won: "Won", lost: "Lost", spam: "Spam" };
 
-export function LeadsWorkspace({ initialLeads }: { initialLeads: Lead[] }) {
+type AgentOption = { user_id: string; full_name: string | null; email: string };
+
+export function LeadsWorkspace({ initialLeads, agents }: { initialLeads: Lead[]; agents: AgentOption[] }) {
   const [leads, setLeads] = useState(initialLeads);
   const [query, setQuery] = useState("");
   const [stage, setStage] = useState<LeadStatus | "all">("all");
+  const [followUps, setFollowUps] = useState<Record<string, string>>({});
+  const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -49,6 +53,22 @@ export function LeadsWorkspace({ initialLeads }: { initialLeads: Lead[] }) {
     });
   }
 
+  function saveWorkflow(lead: Lead) {
+    const followUpValue = followUps[lead.id] ?? (lead.follow_up_at ? new Date(lead.follow_up_at).toISOString().slice(0, 16) : "");
+    const assignedAgentId = assignments[lead.id] !== undefined ? (assignments[lead.id] || null) : lead.assigned_agent_id;
+    startTransition(async () => {
+      const result = await updateLeadWorkflowAction({
+        leadId: lead.id,
+        status: lead.status,
+        assignedAgentId,
+        followUpAt: followUpValue ? new Date(followUpValue).toISOString() : null,
+      });
+      if (!result.ok) { setError(result.error); return; }
+      setLeads((current) => current.map((item) => item.id === lead.id ? { ...item, assigned_agent_id: assignedAgentId, follow_up_at: followUpValue ? new Date(followUpValue).toISOString() : null } : item));
+      setError("");
+    });
+  }
+
   return (
     <>
       <div className="lead-stage-row">{stages.map((item) => <button key={item} className={"chip " + (stage === item ? "chip-active" : "")} onClick={() => setStage(item)}>{item === "all" ? "All" : labels[item]}</button>)}</div>
@@ -67,6 +87,11 @@ export function LeadsWorkspace({ initialLeads }: { initialLeads: Lead[] }) {
                 <div className="lead-title-line"><h3>{lead.full_name}</h3><span className={"lead-status status-" + lead.status}>{labels[lead.status] || lead.status}</span></div>
                 <div className="lead-meta"><span>{lead.email || "No email"}</span><span>·</span><span>{lead.phone || "No phone"}</span></div>
                 <div className="lead-meta"><span>{lead.source.replace("_", " ")}</span>{lead.preferred_location && <span>· {lead.preferred_location}</span>}<span>Added {new Date(lead.created_at).toLocaleDateString()}</span></div>
+              </div>
+              <div className="lead-workflow-controls">
+                <label>Follow-up <input type="datetime-local" aria-label={"Follow-up for " + lead.full_name} value={followUps[lead.id] ?? (lead.follow_up_at ? new Date(lead.follow_up_at).toISOString().slice(0, 16) : "")} onChange={(event) => setFollowUps((current) => ({ ...current, [lead.id]: event.target.value }))} /></label>
+                <label>Assigned to <select aria-label={"Assign " + lead.full_name} value={assignments[lead.id] ?? lead.assigned_agent_id ?? ""} onChange={(event) => setAssignments((current) => ({ ...current, [lead.id]: event.target.value }))}><option value="">Unassigned</option>{agents.map((agent) => <option key={agent.user_id} value={agent.user_id}>{agent.full_name || agent.email}</option>)}</select></label>
+                <button type="button" className="secondary-button" disabled={pending} onClick={() => saveWorkflow(lead)}>Save</button>
               </div>
               <select aria-label={"Update status for " + lead.full_name} value={lead.status} disabled={pending} onChange={(event) => changeStatus(lead.id, event.target.value as LeadStatus)}>{stages.filter((item): item is LeadStatus => item !== "all").map((item) => <option key={item} value={item}>{labels[item]}</option>)}</select>
             </article>
