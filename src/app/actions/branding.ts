@@ -18,7 +18,8 @@ const brandingSchema = z.object({
   hero_subtitle: z.string().max(500).optional().nullable(),
   seo_title: z.string().max(120).optional().nullable(),
   seo_description: z.string().max(300).optional().nullable(),
-  published: z.boolean().optional(),\n  custom_domain: z.string().trim().max(253)
+  published: z.boolean().optional(),
+  custom_domain: z.string().trim().max(253)
     .regex(/^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,63}$/)
     .optional().nullable(),
 });
