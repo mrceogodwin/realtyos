@@ -17,12 +17,28 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
   const [viewings, setViewings] = useState(initialViewings);
   const [filter, setFilter] = useState<ViewingStatus | "all">("all");
   const [open, setOpen] = useState(false);
+  const [calendarMode, setCalendarMode] = useState(false);
   const [rescheduleTimes, setRescheduleTimes] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const propertyNames = useMemo(() => new Map(properties.map((property) => [property.id, property.title])), [properties]);
   const leadNames = useMemo(() => new Map(leads.map((lead) => [lead.id, lead.full_name])), [leads]);
   const rows = useMemo(() => viewings.filter((viewing) => filter === "all" || viewing.status === filter).sort((a,b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()), [viewings, filter]);
+  const calendarDays = useMemo(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - start.getDay());
+    return Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(start);
+      day.setDate(start.getDate() + index);
+      const key = [day.getFullYear(), String(day.getMonth() + 1).padStart(2, "0"), String(day.getDate()).padStart(2, "0")].join("-");
+      const items = rows.filter((item) => {
+        const date = new Date(item.scheduled_at);
+        return date.getFullYear() === day.getFullYear() && date.getMonth() === day.getMonth() && date.getDate() === day.getDate();
+      });
+      return { day, key, items };
+    });
+  }, [rows]);
 
   function create(formData: FormData) {
     const date = String(formData.get("scheduled_at") || "");
@@ -69,9 +85,19 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
     <>
       <div className="lead-stage-row">{filters.map((item) => <button key={item} className={"chip " + (filter === item ? "chip-active" : "")} onClick={() => setFilter(item)}>{item === "all" ? "All" : labels[item]}</button>)}</div>
       <section className="panel">
-        <div className="panel-heading"><div><h2>Schedule</h2><p>{rows.length} appointments in this workspace</p></div><button className="primary-button" onClick={() => { setError(""); setOpen(true); }} disabled={properties.length === 0}><Plus size={16} /> Schedule viewing</button></div>
+        <div className="panel-heading"><div><h2>Schedule</h2><p>{rows.length} appointments in this workspace</p></div><div className="panel-actions"><button type="button" className="secondary-button" onClick={() => setCalendarMode((value) => !value)}>{calendarMode ? "List view" : "Week calendar"}</button><button className="primary-button" onClick={() => { setError(""); setOpen(true); }} disabled={properties.length === 0}><Plus size={16} /> Schedule viewing</button></div></div>
         {error && <div className="notice-banner" role="alert"><span>{error}</span><button onClick={() => setError("")} aria-label="Dismiss"><X size={15} /></button></div>}
-        <div className="viewing-list">
+        {calendarMode ? <div className="viewing-calendar-grid" aria-label="Weekly viewing calendar">
+          {calendarDays.map(({ day, key, items }) => <section key={key} className="viewing-calendar-day">
+            <div className="viewing-calendar-day-heading"><strong>{day.toLocaleDateString("en-NG", { weekday: "short" })}</strong><span>{day.toLocaleDateString("en-NG", { day: "numeric", month: "short" })}</span></div>
+            {items.length ? items.map((item) => <article key={item.id} className="viewing-calendar-item">
+              <strong>{new Date(item.scheduled_at).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}</strong>
+              <span>{propertyNames.get(item.property_id) || "Property viewing"}</span>
+              <small>{item.visitor_name}</small>
+              <span className={"lead-status status-" + item.status}>{labels[item.status] || item.status}</span>
+            </article>) : <p className="viewing-calendar-empty">No viewings</p>}
+          </section>)}
+        </div> : <div className="viewing-list">
           {rows.map((viewing) => {
             const date = new Date(viewing.scheduled_at);
             return <article key={viewing.id} className="viewing-row">
@@ -87,7 +113,7 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
             </article>;
           })}
           {rows.length === 0 && <div className="empty-state"><CalendarDays size={22} /><strong>{viewings.length ? "No appointments in this filter" : "No viewings scheduled"}</strong><span>{viewings.length ? "Choose another status." : "Schedule the first property viewing for this workspace."}</span></div>}
-        </div>
+        </div>}
       </section>
       {open && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) setOpen(false); }}>
         <section className="modal" role="dialog" aria-modal="true" aria-labelledby="viewing-create-title">
