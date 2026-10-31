@@ -24,7 +24,7 @@ export function BrandingSettingsForm(props: Props) {
   const [heroSubtitle, setHeroSubtitle] = useState(props.heroSubtitle);
   const [seoTitle, setSeoTitle] = useState(props.seoTitle);
   const [seoDescription, setSeoDescription] = useState(props.seoDescription);
-  const [domain, setDomain] = useState(props.customDomain);
+  const [domain, setDomain] = useState(props.customDomain);\n  const [published, setPublished] = useState(props.published);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -41,7 +41,7 @@ export function BrandingSettingsForm(props: Props) {
         hero_subtitle: heroSubtitle,
         seo_title: seoTitle,
         seo_description: seoDescription,
-        custom_domain: domain.trim() || null,
+        custom_domain: domain.trim() || null,\n        published,
       });
       if (!result.ok) {
         setError(result.error);
@@ -84,7 +84,7 @@ export function BrandingSettingsForm(props: Props) {
           <div className="brand-form">
             <label>Workspace URL<div className="slug-field"><span>realtyos.app/s/</span><input value={props.workspaceSlug} readOnly /></div></label>
             <label>Custom domain<input value={domain} onChange={(e) => setDomain(e.target.value)} placeholder="www.youragency.com" /></label>
-            <p className="field-hint">A custom domain is saved as pending configuration. DNS verification and domain activation are separate steps.</p>
+            <p className="field-hint">A custom domain is saved as pending configuration. DNS verification and domain activation are separate steps.</p>\n            <label className="checkbox-label"><input type="checkbox" checked={published} onChange={(event) => setPublished(event.target.checked)} /> Publish public website</label>\n            <p className="field-hint">When disabled, visitors cannot access this agency website or its property pages.</p>
           </div>
         </section>
       </div>
