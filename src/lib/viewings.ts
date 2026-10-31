@@ -136,3 +136,13 @@ export async function updateViewingStatus(
     [status, viewingId, tenantId]
   );
 }
+
+
+export async function recordViewingActivity(tenantId: string, actorId: string, viewingId: string, action: string, metadata: Record<string, unknown> = {}): Promise<void> {
+  await query(
+    `INSERT INTO audit_logs (tenant_id, actor_id, action, entity_type, entity_id, metadata)
+     SELECT $1, $2, $3, 'viewing', $4, $5::jsonb
+      WHERE EXISTS (SELECT 1 FROM property_viewings WHERE id = $4 AND tenant_id = $1)`,
+    [tenantId, actorId, action, viewingId, JSON.stringify(metadata)]
+  );
+}
