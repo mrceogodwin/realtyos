@@ -52,7 +52,7 @@ export default async function TeamPage() {
           <div className="team-list">
             {members.map((member) => {
               const displayName = member.full_name || member.email;
-              const initials = displayName.split(/\\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+              const initials = displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
               return (
                 <article key={member.id} className="team-row">
                   <div className="lead-avatar">{initials || "U"}</div>
