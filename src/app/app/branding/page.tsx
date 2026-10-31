@@ -29,6 +29,7 @@ export default async function BrandingPage() {
           seoTitle={settings?.seo_title ?? context.tenant.name}
           seoDescription={settings?.seo_description ?? ""}
           customDomain={settings?.custom_domain ?? ""}
+          published={settings?.published ?? false}
           workspaceSlug={context.tenant.slug}
         />
       </AppShell>
