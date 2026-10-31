@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createLeadSchema, updateLeadStatusSchema } from "@/lib/validation";
-import { createLead as insertLead, updateLeadStatus, updateLeadWorkflow } from "@/lib/leads";
+import { createLead as insertLead, updateLeadStatus, updateLeadWorkflow, recordLeadActivity } from "@/lib/leads";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import type { LeadStatus } from "@/lib/types";
 import { getCurrentAuthContext, requireTenant } from "@/lib/auth";
@@ -35,6 +35,7 @@ export async function createLeadAction(
 
   try {
     const lead = await insertLead(scope.tenant.id, parsed.data);
+    await recordLeadActivity(scope.tenant.id, scope.user.id, lead.id, "lead.created", { source: parsed.data.source ?? "manual" });
     revalidatePath("/app/leads");
     revalidatePath("/app");
     return { ok: true, data: lead };
@@ -68,6 +69,7 @@ export async function updateLeadStatusAction(
 
   try {
     const lead = await updateLeadStatus(scope.tenant.id, parsed.data.leadId, parsed.data.status);
+    if (lead) await recordLeadActivity(scope.tenant.id, scope.user.id, lead.id, "lead.status_changed", { status: parsed.data.status });
     if (!lead) {
       return { ok: false, error: "Lead not found in this workspace", code: "NOT_FOUND" };
     }
@@ -110,6 +112,7 @@ export async function updateLeadWorkflowAction(raw: unknown): Promise<ActionResu
       followUpAt: parsed.data.followUpAt,
     });
     if (!lead) return { ok: false, error: "Lead not found in this workspace", code: "NOT_FOUND" };
+    await recordLeadActivity(scope.tenant.id, scope.user.id, lead.id, "lead.workflow_updated", { status: parsed.data.status, assignedAgentId: parsed.data.assignedAgentId, followUpAt: parsed.data.followUpAt });
     revalidatePath("/app/leads");
     revalidatePath("/app");
     return { ok: true, data: lead };
