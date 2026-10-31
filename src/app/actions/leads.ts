@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createLeadSchema, updateLeadStatusSchema } from "@/lib/validation";
-import { createLead as insertLead, updateLeadStatus } from "@/lib/leads";
+import { createLead as insertLead, updateLeadStatus, updateLeadWorkflow } from "@/lib/leads";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import type { LeadStatus } from "@/lib/types";
 import { getCurrentAuthContext, requireTenant } from "@/lib/auth";
@@ -82,5 +82,39 @@ export async function updateLeadStatusAction(
     }
     console.error("[updateLeadStatusAction]", err);
     return { ok: false, error: "Failed to update lead", code: "SERVER" };
+  }
+}
+
+const leadWorkflowSchema = z.object({
+  leadId: z.string().uuid(),
+  status: z.enum(["new", "contacted", "qualified", "viewing_scheduled", "negotiating", "won", "lost", "spam"]),
+  assignedAgentId: z.string().uuid().nullable(),
+  followUpAt: z.string().datetime().nullable(),
+});
+
+export async function updateLeadWorkflowAction(raw: unknown): Promise<ActionResult> {
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
+  let scope;
+  try { scope = requireTenant(context); } catch { return { ok: false, error: "Active workspace required", code: "NO_TENANT" }; }
+  if (!hasMinimumRole(scope.membership, "agent")) return { ok: false, error: "Insufficient permissions", code: "FORBIDDEN" };
+
+  const parsed = leadWorkflowSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues.map((issue) => issue.message).join("; "), code: "VALIDATION" };
+
+  try {
+    const lead = await updateLeadWorkflow(scope.tenant.id, parsed.data.leadId, {
+      status: parsed.data.status,
+      assignedAgentId: parsed.data.assignedAgentId,
+      followUpAt: parsed.data.followUpAt,
+    });
+    if (!lead) return { ok: false, error: "Lead not found in this workspace", code: "NOT_FOUND" };
+    revalidatePath("/app/leads");
+    revalidatePath("/app");
+    return { ok: true, data: lead };
+  } catch (error) {
+    if (error instanceof DatabaseNotConfiguredError) return { ok: false, error: "Database is not configured yet.", code: "DB_NOT_CONFIGURED" };
+    console.error("[updateLeadWorkflowAction]", error);
+    return { ok: false, error: "Could not update lead workflow", code: "SERVER" };
   }
 }
