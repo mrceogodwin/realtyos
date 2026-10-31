@@ -7,6 +7,8 @@ DECLARE
   user_c UUID := gen_random_uuid();
   property_a UUID := gen_random_uuid();
   lead_a UUID := gen_random_uuid();
+  rate_key TEXT := encode(gen_random_bytes(32), 'hex');
+  rate_count INTEGER;
 BEGIN
   INSERT INTO tenants (id, name, slug) VALUES
     (tenant_a, 'Integrity Test A', 'integrity-test-a-' || replace(tenant_a::text, '-', '')),
@@ -124,6 +126,23 @@ BEGIN
   EXCEPTION WHEN check_violation THEN
     NULL;
   END;
+
+  -- Public enquiry rate-limit buckets increment atomically for the same key.
+  INSERT INTO public_enquiry_rate_limits (bucket_key, window_started_at, request_count, expires_at)
+  VALUES (rate_key, now(), 1, now() + interval '10 minutes');
+
+  INSERT INTO public_enquiry_rate_limits (bucket_key, window_started_at, request_count, expires_at)
+  VALUES (rate_key, now(), 1, now() + interval '10 minutes')
+  ON CONFLICT (bucket_key) DO UPDATE
+    SET request_count = public_enquiry_rate_limits.request_count + 1,
+        expires_at = now() + interval '10 minutes';
+
+  SELECT request_count INTO rate_count
+    FROM public_enquiry_rate_limits WHERE bucket_key = rate_key;
+  IF rate_count <> 2 THEN
+    RAISE EXCEPTION 'Rate limit failure: expected atomic count 2, got %', rate_count;
+  END IF;
+  DELETE FROM public_enquiry_rate_limits WHERE bucket_key = rate_key;
 
   RAISE NOTICE 'Tenant integrity checks passed for isolated workspaces % and %', tenant_a, tenant_b;
 END $$;
