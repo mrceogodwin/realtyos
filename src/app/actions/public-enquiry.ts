@@ -74,8 +74,9 @@ export async function createPublicEnquiryAction(
     }
 
     const requestHeaders = await headers();
-    const forwardedFor = requestHeaders.get("x-forwarded-for");
-    const clientIp = requestHeaders.get("x-real-ip") || forwardedFor?.split(",")[0]?.trim() || "unknown";
+    // Use the hosting platform supplied client IP only. x-forwarded-for is
+    // client-influenced on some deployments and must not be trusted for limits.
+    const clientIp = requestHeaders.get("x-real-ip")?.trim() || "unknown";
     const rateLimitSecret = process.env.REALTYOS_RATE_LIMIT_SECRET || process.env.AUTH_SECRET;
     if (!rateLimitSecret) {
       console.error("[createPublicEnquiryAction] Rate-limit secret is not configured");
