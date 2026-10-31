@@ -55,7 +55,7 @@ export const createViewingSchema = z.object({
   visitor_email: z.string().email().optional().nullable(),
   visitor_phone: z.string().max(30).optional().nullable(),
   scheduled_at: z.string().datetime(),
-  duration_minutes: z.number().int().positive().default(60),
+  duration_minutes: z.number().int().min(15).max(480).default(60),
   notes: z.string().max(2000).optional().nullable(),
   agent_id: z.string().uuid().optional().nullable(),
 });
