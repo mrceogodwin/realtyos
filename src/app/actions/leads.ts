@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createLeadSchema, updateLeadStatusSchema } from "@/lib/validation";
-import { createLead as insertLead, updateLeadStatus, updateLeadWorkflow, recordLeadActivity } from "@/lib/leads";
+import { createLead as insertLead, updateLeadStatus, updateLeadWorkflow, recordLeadActivity, getLeadById } from "@/lib/leads";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import type { LeadStatus } from "@/lib/types";
 import { getCurrentAuthContext, requireTenant } from "@/lib/auth";
@@ -135,6 +135,8 @@ export async function addLeadNoteAction(raw: unknown): Promise<ActionResult> {
   const parsed = leadNoteSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Enter a note of up to 5,000 characters.", code: "VALIDATION" };
   try {
+    const lead = await getLeadById(scope.tenant.id, parsed.data.leadId);
+    if (!lead) return { ok: false, error: "Lead not found in this workspace", code: "NOT_FOUND" };
     await recordLeadActivity(scope.tenant.id, scope.user.id, parsed.data.leadId, "lead.note_added", { note: parsed.data.note });
     revalidatePath("/app/leads");
     return { ok: true, data: { saved: true } };
