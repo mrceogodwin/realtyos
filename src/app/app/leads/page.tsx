@@ -18,7 +18,7 @@ export default async function LeadsPage() {
   let agents: AgentOption[] = [];
   try {
     leads = await listLeads({ tenantId: context.tenant.id, limit: 100 });
-    agents = await queryMany<AgentOption>("SELECT m.user_id, u.full_name, u.email FROM tenant_memberships m JOIN user_profiles u ON u.id = m.user_id WHERE m.tenant_id = $1 AND m.status = $2 ORDER BY u.full_name NULLS LAST, u.email", [context.tenant.id, "active"]);
+    agents = await queryMany<AgentOption>("SELECT m.user_id, u.full_name, u.email FROM tenant_memberships m JOIN user_profiles u ON u.id = m.user_id WHERE m.tenant_id = $1 AND m.status = $2 AND m.role IN ('agent', 'admin', 'owner') ORDER BY u.full_name NULLS LAST, u.email", [context.tenant.id, "active"]);
   } catch (error) {
     if (error instanceof DatabaseNotConfiguredError) databaseUnavailable = true;
     else throw error;
