@@ -18,6 +18,7 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
   const [filter, setFilter] = useState<ViewingStatus | "all">("all");
   const [open, setOpen] = useState(false);
   const [calendarMode, setCalendarMode] = useState(false);
+  const [calendarWeekOffset, setCalendarWeekOffset] = useState(0);
   const [rescheduleTimes, setRescheduleTimes] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -27,7 +28,7 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
   const calendarDays = useMemo(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
-    start.setDate(start.getDate() - start.getDay());
+    start.setDate(start.getDate() - start.getDay() + calendarWeekOffset * 7);
     return Array.from({ length: 7 }, (_, index) => {
       const day = new Date(start);
       day.setDate(start.getDate() + index);
@@ -38,7 +39,7 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
       });
       return { day, key, items };
     });
-  }, [rows]);
+  }, [rows, calendarWeekOffset]);
 
   function create(formData: FormData) {
     const date = String(formData.get("scheduled_at") || "");
@@ -87,7 +88,14 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
       <section className="panel">
         <div className="panel-heading"><div><h2>Schedule</h2><p>{rows.length} appointments in this workspace</p></div><div className="panel-actions"><button type="button" className="secondary-button" onClick={() => setCalendarMode((value) => !value)}>{calendarMode ? "List view" : "Week calendar"}</button><button className="primary-button" onClick={() => { setError(""); setOpen(true); }} disabled={properties.length === 0}><Plus size={16} /> Schedule viewing</button></div></div>
         {error && <div className="notice-banner" role="alert"><span>{error}</span><button onClick={() => setError("")} aria-label="Dismiss"><X size={15} /></button></div>}
-        {calendarMode ? <div className="viewing-calendar-grid" aria-label="Weekly viewing calendar">
+        {calendarMode ? <>
+          <div className="viewing-calendar-toolbar">
+            <button type="button" className="secondary-button" onClick={() => setCalendarWeekOffset((value) => value - 1)}>Previous week</button>
+            <strong>{calendarDays[0]?.day.toLocaleDateString("en-NG", { day: "numeric", month: "short" })} – {calendarDays[6]?.day.toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}</strong>
+            <button type="button" className="secondary-button" onClick={() => setCalendarWeekOffset(0)}>Today</button>
+            <button type="button" className="secondary-button" onClick={() => setCalendarWeekOffset((value) => value + 1)}>Next week</button>
+          </div>
+          <div className="viewing-calendar-grid" aria-label="Weekly viewing calendar">
           {calendarDays.map(({ day, key, items }) => <section key={key} className="viewing-calendar-day">
             <div className="viewing-calendar-day-heading"><strong>{day.toLocaleDateString("en-NG", { weekday: "short" })}</strong><span>{day.toLocaleDateString("en-NG", { day: "numeric", month: "short" })}</span></div>
             {items.length ? items.map((item) => <article key={item.id} className="viewing-calendar-item">
@@ -97,7 +105,8 @@ export function ViewingsWorkspace({ initialViewings, properties, leads, activiti
               <span className={"lead-status status-" + item.status}>{labels[item.status] || item.status}</span>
             </article>) : <p className="viewing-calendar-empty">No viewings</p>}
           </section>)}
-        </div> : <div className="viewing-list">
+          </div>
+        </> : <div className="viewing-list">
           {rows.map((viewing) => {
             const date = new Date(viewing.scheduled_at);
             return <article key={viewing.id} className="viewing-row">
