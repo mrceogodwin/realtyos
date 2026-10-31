@@ -5,6 +5,7 @@ import { getCurrentAuthContext } from "@/lib/auth";
 import { DatabaseNotConfiguredError, queryMany } from "@/lib/db";
 import { TeamInviteForm } from "@/components/team-invite-form";
 import { TeamInvitationList } from "@/components/team-invitation-list";
+import { TeamMemberAccessControl } from "@/components/team-member-access-control";
 
 type TeamInvitation = { id: string; email: string; role: string; expires_at: string };
 
