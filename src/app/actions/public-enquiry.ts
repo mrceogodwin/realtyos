@@ -40,8 +40,11 @@ export async function createPublicEnquiryAction(
     };
   }
 
-  const { workspaceSlug, propertySlug, full_name, email, phone, notes } =
+  const { workspaceSlug, propertySlug, full_name, email, phone, notes, website_url } =
     parsed.data;
+
+  // Quietly accept bot submissions without storing them or revealing the honeypot.
+  if (website_url) return { ok: true, data: { id: "accepted" } };
 
   if (!email && !phone) {
     return {
@@ -58,6 +61,15 @@ export async function createPublicEnquiryAction(
         ok: false,
         error: "This agency workspace is not available.",
         code: "TENANT_NOT_FOUND",
+      };
+    }
+
+    const settings = await getTenantSettings(tenant.id);
+    if (settings?.published !== true) {
+      return {
+        ok: false,
+        error: "This agency website is not currently accepting enquiries.",
+        code: "WEBSITE_UNPUBLISHED",
       };
     }
 
@@ -90,15 +102,6 @@ export async function createPublicEnquiryAction(
     );
     if (!rateLimit || Number(rateLimit.request_count) > 5) {
       return { ok: false, error: "Too many enquiries. Please try again in a few minutes.", code: "RATE_LIMITED" };
-    }
-
-    const settings = await getTenantSettings(tenant.id);
-    if (settings?.published !== true) {
-      return {
-        ok: false,
-        error: "This agency website is not currently accepting enquiries.",
-        code: "WEBSITE_UNPUBLISHED",
-      };
     }
 
     let propertyId: string | null = null;
