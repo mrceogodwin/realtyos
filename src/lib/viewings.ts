@@ -93,7 +93,7 @@ export async function createViewing(
   if (input.agent_id) {
     const membership = await queryOne<{ user_id: string }>(
       `SELECT user_id FROM tenant_memberships
-       WHERE tenant_id = $1 AND user_id = $2 AND status = 'active'`,
+       WHERE tenant_id = $1 AND user_id = $2 AND status = 'active' AND role IN ('agent', 'admin', 'owner')`,
       [tenantId, input.agent_id]
     );
     if (!membership) throw new Error("Assigned agent is not an active member of this workspace");
