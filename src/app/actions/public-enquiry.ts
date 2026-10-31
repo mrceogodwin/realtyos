@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { getTenantBySlug } from "@/lib/tenants";
+import { getTenantBySlug, getTenantSettings } from "@/lib/tenants";
 import { getPropertyBySlug } from "@/lib/properties";
 import { createLead } from "@/lib/leads";
 import { DatabaseNotConfiguredError } from "@/lib/db";
@@ -58,12 +58,26 @@ export async function createPublicEnquiryAction(
       };
     }
 
+    const settings = await getTenantSettings(tenant.id);
+    if (settings?.published !== true) {
+      return {
+        ok: false,
+        error: "This agency website is not currently accepting enquiries.",
+        code: "WEBSITE_UNPUBLISHED",
+      };
+    }
+
     let propertyId: string | null = null;
     if (propertySlug) {
       const property = await getPropertyBySlug(tenant.id, propertySlug);
-      if (property && property.status === "published") {
-        propertyId = property.id;
+      if (!property || property.status !== "published") {
+        return {
+          ok: false,
+          error: "This property is no longer available for enquiries.",
+          code: "PROPERTY_UNAVAILABLE",
+        };
       }
+      propertyId = property.id;
     }
 
     const lead = await createLead(tenant.id, {
