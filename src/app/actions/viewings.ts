@@ -38,6 +38,8 @@ export async function createViewingAction(
     };
   }
 
+  if (new Date(parsed.data.scheduled_at).getTime() <= Date.now()) return { ok: false, error: "Viewing must be scheduled for a future date and time", code: "VALIDATION" };
+
   try {
     const viewing = await insertViewing(scope.tenant.id, parsed.data, scope.user.id);
     await recordViewingActivity(scope.tenant.id, scope.user.id, viewing.id, "viewing.scheduled", { propertyId: viewing.property_id, scheduledAt: viewing.scheduled_at });
@@ -106,6 +108,7 @@ export async function rescheduleViewingAction(raw: unknown): Promise<ActionResul
   let scope;
   try { scope = requireTenant(context); } catch { return { ok: false, error: "Active workspace required", code: "NO_TENANT" }; }
   if (!hasMinimumRole(scope.membership, "agent")) return { ok: false, error: "Insufficient permissions", code: "FORBIDDEN" };
+  if (new Date(parsed.data.scheduledAt).getTime() <= Date.now()) return { ok: false, error: "New viewing time must be in the future", code: "VALIDATION" };
   try {
     const viewing = await rescheduleViewing(scope.tenant.id, parsed.data.viewingId, parsed.data.scheduledAt, parsed.data.durationMinutes);
     if (!viewing) return { ok: false, error: "Viewing not found in this workspace", code: "NOT_FOUND" };
