@@ -4,6 +4,7 @@ import { PropertyCreateForm } from "@/components/property-create-form";
 import { getCurrentAuthContext } from "@/lib/auth";
 import { listProperties } from "@/lib/properties";
 import { DatabaseNotConfiguredError } from "@/lib/db";
+import { hasMinimumRole } from "@/lib/tenant";
 import type { Property } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -75,7 +76,7 @@ export default async function PropertiesPage() {
     <AppShell
       title="Properties"
       subtitle={`Live inventory for ${context.tenant.name}.`}
-      actions={<PropertyCreateForm />}
+      actions={hasMinimumRole(context.membership, "editor") ? <PropertyCreateForm /> : undefined}
     >
       {databaseUnavailable ? (
         <section className="panel"><div className="empty-state"><Building2 size={23} /><strong>Database connection required</strong><span>Property records will appear here once the workspace database is configured.</span></div></section>
