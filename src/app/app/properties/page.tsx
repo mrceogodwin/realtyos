@@ -6,6 +6,7 @@ import { listProperties } from "@/lib/properties";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import { hasMinimumRole } from "@/lib/tenant";
 import { PropertyStatusControl } from "@/components/property-status-control";
+import { PropertyEditForm } from "@/components/property-edit-form";
 import type { Property } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +56,7 @@ function PropertyCard({ property, canManage }: { property: Property; canManage: 
           {specs}
         </div>
         <div className="property-price">{money(property.price, property.currency)}</div>
-        {canManage && <PropertyStatusControl propertyId={property.id} initialStatus={property.status} />}
+        {canManage && <div className="property-actions"><PropertyEditForm property={property} /><PropertyStatusControl propertyId={property.id} initialStatus={property.status} /></div>}
       </div>
     </article>
   );
