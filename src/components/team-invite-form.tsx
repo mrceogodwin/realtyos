@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Check, Copy, LoaderCircle, Send } from "lucide-react";
 import { createTeamInvitationAction } from "@/app/actions/team";
 
-export function TeamInviteForm() {
+export function TeamInviteForm({ canInviteAdmin = false }: { canInviteAdmin?: boolean }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("agent");
   const [inviteUrl, setInviteUrl] = useState("");
@@ -53,7 +53,7 @@ export function TeamInviteForm() {
             <option value="agent">Agent</option>
             <option value="editor">Editor</option>
             <option value="viewer">Viewer</option>
-            <option value="admin">Admin</option>
+            {canInviteAdmin && <option value="admin">Admin</option>}
           </select>
         </label>
         <button type="submit" className="primary-button" disabled={pending}>
