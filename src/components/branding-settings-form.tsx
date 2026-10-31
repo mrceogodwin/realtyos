@@ -13,6 +13,7 @@ type Props = {
   seoTitle: string;
   seoDescription: string;
   customDomain: string;
+  published: boolean;
   workspaceSlug: string;
 };
 
