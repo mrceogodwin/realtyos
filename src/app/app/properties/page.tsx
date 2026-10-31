@@ -5,6 +5,7 @@ import { getCurrentAuthContext } from "@/lib/auth";
 import { listProperties } from "@/lib/properties";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import { hasMinimumRole } from "@/lib/tenant";
+import { PropertyStatusControl } from "@/components/property-status-control";
 import type { Property } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ function money(value: number, currency: string) {
   }
 }
 
-function PropertyCard({ property }: { property: Property }) {
+function PropertyCard({ property, canManage }: { property: Property; canManage: boolean }) {
   const location = [property.address, property.city, property.state]
     .filter(Boolean)
     .join(", ") || "Location not provided";
@@ -54,6 +55,7 @@ function PropertyCard({ property }: { property: Property }) {
           {specs}
         </div>
         <div className="property-price">{money(property.price, property.currency)}</div>
+        {canManage && <PropertyStatusControl propertyId={property.id} initialStatus={property.status} />}
       </div>
     </article>
   );
@@ -88,7 +90,7 @@ export default async function PropertiesPage() {
             <span className="list-count"><strong>{properties.length}</strong> properties in this workspace</span>
             <span className="list-count">Live database records</span>
           </div>
-          <div className="property-list">{properties.map((property) => <PropertyCard key={property.id} property={property} />)}</div>
+          <div className="property-list">{properties.map((property) => <PropertyCard key={property.id} property={property} canManage={hasMinimumRole(context.membership, "editor")} />)}</div>
           <div className="panel-footer-link" style={{ cursor: "default" }}>Showing {properties.length} workspace listings</div>
         </section>
       )}
