@@ -1,4 +1,4 @@
-import { query, queryMany, queryOne } from "./db";
+import { query, queryMany, queryOne, withTransaction } from "./db";
 import type { PropertyViewing, ViewingStatus } from "./types";
 import type { CreateViewingInput } from "./validation";
 
@@ -167,4 +167,37 @@ export async function listViewingActivities(tenantId: string, limit = 200): Prom
       ORDER BY a.created_at DESC LIMIT $2`,
     [tenantId, Math.min(Math.max(limit, 1), 500)]
   );
+}
+
+
+export class ViewingConflictError extends Error {
+  constructor() { super("This time conflicts with another active viewing for the property or assigned agent."); this.name = "ViewingConflictError"; }
+}
+
+export async function rescheduleViewing(tenantId: string, viewingId: string, scheduledAt: string, durationMinutes: number): Promise<PropertyViewing | null> {
+  return withTransaction(async (client) => {
+    // Serialize scheduling changes within a workspace so simultaneous requests cannot pass the same conflict check.
+    await client.query("SELECT id FROM tenants WHERE id = $1 FOR UPDATE", [tenantId]);
+    const current = await client.query<PropertyViewing>("SELECT * FROM property_viewings WHERE id = $1 AND tenant_id = $2 FOR UPDATE", [viewingId, tenantId]);
+    const viewing = current.rows[0];
+    if (!viewing) return null;
+    if (["cancelled", "completed", "no_show"].includes(viewing.status)) throw new Error("This viewing can no longer be rescheduled.");
+    const conflict = await client.query(
+      `SELECT id FROM property_viewings
+        WHERE tenant_id = $1 AND id <> $2
+          AND status NOT IN ('cancelled', 'completed', 'no_show')
+          AND (property_id = $3 OR ($4::uuid IS NOT NULL AND agent_id = $4))
+          AND scheduled_at < ($5::timestamptz + ($6::int * interval '1 minute'))
+          AND (scheduled_at + (duration_minutes * interval '1 minute')) > $5::timestamptz
+        LIMIT 1`,
+      [tenantId, viewingId, viewing.property_id, viewing.agent_id, scheduledAt, durationMinutes]
+    );
+    if (conflict.rowCount) throw new ViewingConflictError();
+    const updated = await client.query<PropertyViewing>(
+      `UPDATE property_viewings SET scheduled_at = $1, duration_minutes = $2, status = 'rescheduled', updated_at = now()
+        WHERE id = $3 AND tenant_id = $4 RETURNING *`,
+      [scheduledAt, durationMinutes, viewingId, tenantId]
+    );
+    return updated.rows[0] ?? null;
+  });
 }
