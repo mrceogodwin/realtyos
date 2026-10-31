@@ -12,6 +12,7 @@ export default async function PublicPropertyDetailPage({ params }: Props) {
 
   let tenant = null;
   let branding = null;
+  let settings = null;
   let property = null;
   let dbError = false;
 
@@ -19,7 +20,8 @@ export default async function PublicPropertyDetailPage({ params }: Props) {
     tenant = await getTenantBySlug(slug);
     if (tenant) {
       branding = await getTenantBranding(tenant.id);
-      property = await getPropertyBySlug(tenant.id, propertySlug);
+      settings = await getTenantSettings(tenant.id);
+      if (settings?.published === true) property = await getPropertyBySlug(tenant.id, propertySlug);
       if (property && property.status !== "published") {
         property = null;
       }
