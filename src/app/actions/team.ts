@@ -227,3 +227,58 @@ export async function revokeTeamInvitationAction(raw: unknown): Promise<TeamActi
     return { ok: false, error: "Unable to revoke invitation", code: "SERVER" };
   }
 }
+
+const memberAccessSchema = z.object({
+  membershipId: z.string().uuid(),
+  role: z.enum(["admin", "agent", "editor", "viewer"]),
+  status: z.enum(["active", "suspended"]),
+});
+
+export async function updateTeamMemberAccessAction(raw: unknown): Promise<TeamActionResult<{ membershipId: string; role: string; status: string }>> {
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
+  let scope;
+  try { scope = requireTenant(context); } catch {
+    return { ok: false, error: "Choose an active workspace first", code: "NO_TENANT" };
+  }
+  if (!hasMinimumRole(scope.membership, "admin")) {
+    return { ok: false, error: "Only workspace owners and admins can manage member access", code: "FORBIDDEN" };
+  }
+  const parsed = memberAccessSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Invalid member access settings", code: "VALIDATION" };
+
+  try {
+    const updated = await withTransaction(async (client) => {
+      // Lock tenant first; migration 0007 uses the same lock to serialize owner changes.
+      const tenant = await client.query("SELECT id FROM tenants WHERE id = $1 AND status = 'active' FOR UPDATE", [scope.tenant.id]);
+      if (!tenant.rowCount) throw new Error("WORKSPACE_UNAVAILABLE");
+      const found = await client.query<{ id: string; user_id: string; role: string; status: string }>(
+        "SELECT id, user_id, role, status FROM tenant_memberships WHERE id = $1 AND tenant_id = $2 FOR UPDATE",
+        [parsed.data.membershipId, scope.tenant.id]
+      );
+      const member = found.rows[0];
+      if (!member) throw new Error("MEMBER_NOT_FOUND");
+      if (member.user_id === scope.user.id) throw new Error("SELF_MANAGEMENT_BLOCKED");
+      if (member.role === "owner") throw new Error("OWNER_MANAGEMENT_BLOCKED");
+      if (parsed.data.role === "admin" && scope.membership.role !== "owner") throw new Error("OWNER_REQUIRED");
+      if (member.role === "admin" && scope.membership.role !== "owner") throw new Error("OWNER_REQUIRED");
+
+      const result = await client.query<{ id: string; role: string; status: string }>(
+        "UPDATE tenant_memberships SET role = $1, status = $2, updated_at = now() WHERE id = $3 AND tenant_id = $4 RETURNING id, role, status",
+        [parsed.data.role, parsed.data.status, member.id, scope.tenant.id]
+      );
+      return result.rows[0];
+    });
+    return { ok: true, data: { membershipId: updated.id, role: updated.role, status: updated.status } };
+  } catch (error) {
+    const code = error instanceof Error ? error.message : "";
+    if (code === "WORKSPACE_UNAVAILABLE") return { ok: false, error: "Workspace is unavailable", code };
+    if (code === "MEMBER_NOT_FOUND") return { ok: false, error: "Member not found in this workspace", code };
+    if (code === "SELF_MANAGEMENT_BLOCKED") return { ok: false, error: "You cannot change your own access here", code };
+    if (code === "OWNER_MANAGEMENT_BLOCKED") return { ok: false, error: "Owner access must be transferred through a dedicated ownership process", code };
+    if (code === "OWNER_REQUIRED") return { ok: false, error: "Only the workspace owner can manage administrator access", code };
+    if (code.includes("A workspace must retain at least one active owner")) return { ok: false, error: "The workspace must retain an active owner", code: "LAST_OWNER" };
+    console.error("[updateTeamMemberAccessAction]", error);
+    return { ok: false, error: "Unable to update member access", code: "SERVER" };
+  }
+}
