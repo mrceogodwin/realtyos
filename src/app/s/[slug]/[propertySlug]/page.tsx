@@ -32,7 +32,11 @@ export default async function PublicPropertyDetailPage({ params }: Props) {
     }
   }
 
-  if (tenant && !dbError && settings?.published !== true) {\n    return <main className="auth-shell"><section className="auth-card"><h1>Website not published</h1><p className="auth-subtitle">This agency has not made its public website available yet.</p></section></main>;\n  }\n\n  const name = tenant?.name ?? formatSlug(slug);
+  if (tenant && !dbError && settings?.published !== true) {
+    return <main className="auth-shell"><section className="auth-card"><h1>Website not published</h1><p className="auth-subtitle">This agency has not made its public website available yet.</p></section></main>;
+  }
+
+  const name = tenant?.name ?? formatSlug(slug);
   const primary = branding?.primary_color ?? "#12634b";
 
   return (
