@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createViewingSchema, updateViewingStatusSchema } from "@/lib/validation";
+import { createViewingSchema, updateViewingStatusSchema, rescheduleViewingSchema } from "@/lib/validation";
 import {
   createViewing as insertViewing,
   updateViewingStatus,
   recordViewingActivity,
+  rescheduleViewing,
+  ViewingConflictError,
 } from "@/lib/viewings";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 import type { ViewingStatus } from "@/lib/types";
@@ -92,5 +94,29 @@ export async function updateViewingStatusAction(
     }
     console.error("[updateViewingStatusAction]", err);
     return { ok: false, error: "Failed to update viewing", code: "SERVER" };
+  }
+}
+
+
+export async function rescheduleViewingAction(raw: unknown): Promise<ActionResult> {
+  const parsed = rescheduleViewingSchema.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "Invalid rescheduling details", code: "VALIDATION" };
+  const context = await getCurrentAuthContext();
+  if (!context) return { ok: false, error: "Authentication required", code: "AUTH_REQUIRED" };
+  let scope;
+  try { scope = requireTenant(context); } catch { return { ok: false, error: "Active workspace required", code: "NO_TENANT" }; }
+  if (!hasMinimumRole(scope.membership, "agent")) return { ok: false, error: "Insufficient permissions", code: "FORBIDDEN" };
+  try {
+    const viewing = await rescheduleViewing(scope.tenant.id, parsed.data.viewingId, parsed.data.scheduledAt, parsed.data.durationMinutes);
+    if (!viewing) return { ok: false, error: "Viewing not found in this workspace", code: "NOT_FOUND" };
+    await recordViewingActivity(scope.tenant.id, scope.user.id, viewing.id, "viewing.rescheduled", { scheduledAt: viewing.scheduled_at, durationMinutes: viewing.duration_minutes });
+    revalidatePath("/app/viewings");
+    revalidatePath("/app");
+    return { ok: true, data: viewing };
+  } catch (err) {
+    if (err instanceof ViewingConflictError) return { ok: false, error: err.message, code: "SCHEDULE_CONFLICT" };
+    if (err instanceof DatabaseNotConfiguredError) return { ok: false, error: "Database is not configured yet.", code: "DB_NOT_CONFIGURED" };
+    console.error("[rescheduleViewingAction]", err);
+    return { ok: false, error: err instanceof Error ? err.message : "Failed to reschedule viewing", code: "SERVER" };
   }
 }
