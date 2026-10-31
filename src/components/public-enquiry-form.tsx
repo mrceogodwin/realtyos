@@ -28,6 +28,7 @@ export function PublicEnquiryForm({
       email: String(form.get("email") || ""),
       phone: String(form.get("phone") || ""),
       notes: String(form.get("notes") || ""),
+      website_url: String(form.get("website_url") || ""),
     });
 
     setPending(false);
