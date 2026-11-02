@@ -10,11 +10,11 @@ export default async function PlatformAdminPage() {
   if (!context) redirect("/login");
   try { requireSuperAdmin(context); } catch { redirect("/app"); }
   const overview = await queryOne<Overview>(`SELECT
-    (SELECT count(*)::text FROM tenants WHERE deleted_at IS NULL) AS tenants,
-    (SELECT count(*)::text FROM tenants WHERE status = 'active' AND deleted_at IS NULL) AS active_tenants,
+    (SELECT count(*)::text FROM tenants ) AS tenants,
+    (SELECT count(*)::text FROM tenants WHERE status = 'active') AS active_tenants,
     (SELECT count(*)::text FROM user_profiles WHERE status = 'active') AS users,
     (SELECT count(*)::text FROM subscriptions WHERE status IN ('trialing', 'active')) AS subscriptions`);
-  const tenants = await queryMany<TenantItem>(`SELECT id, name, slug, status, created_at FROM tenants WHERE deleted_at IS NULL ORDER BY created_at DESC LIMIT 10`);
+  const tenants = await queryMany<TenantItem>(`SELECT id, name, slug, status, created_at FROM tenants  ORDER BY created_at DESC LIMIT 10`);
   const stats = [
     ["Total workspaces", overview?.tenants ?? "0", "Registered agencies", "▦"],
     ["Active workspaces", overview?.active_tenants ?? "0", "Currently active", "⌂"],
