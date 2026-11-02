@@ -5,7 +5,7 @@
 
 export type TenantStatus = "active" | "suspended" | "pending" | "deleted";
 export type MembershipRole = "owner" | "admin" | "agent" | "editor" | "viewer";
-export type MembershipStatus = "active" | "invited" | "suspended" | "revoked";
+export type MembershipStatus = "active" | "invited" | "suspended";
 export type PlatformRole = "super_admin" | "support" | "user";
 export type ListingType = "sale" | "rent" | "lease" | "short_let";
 export type PropertyStatus =
