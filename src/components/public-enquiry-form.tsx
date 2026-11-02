@@ -16,11 +16,13 @@ export function PublicEnquiryForm({
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const formElement = e.currentTarget;
     setPending(true);
     setError("");
     setDone(false);
 
-    const form = new FormData(e.currentTarget);
+    const form = new FormData(formElement);
+    try {
     const result = await createPublicEnquiryAction({
       workspaceSlug,
       propertySlug: propertySlug ?? null,
@@ -34,14 +36,20 @@ export function PublicEnquiryForm({
     setPending(false);
     if (result.ok) {
       setDone(true);
-      e.currentTarget.reset();
+      formElement.reset();
       return;
     }
     setError(result.error);
+    } catch {
+      setError("Could not send enquiry. Check your connection and try again.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
     <form className="pub-enquiry" onSubmit={onSubmit}>
+      <label className="pub-honeypot" aria-hidden="true">Leave this field empty<input name="website_url" tabIndex={-1} autoComplete="off" /></label>
       <label>
         Full name
         <input name="full_name" required placeholder="Your name" />
