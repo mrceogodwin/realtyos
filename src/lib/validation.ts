@@ -9,7 +9,7 @@ export const createPropertySchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be lowercase kebab-case"),
   description: z.string().max(10000).optional().nullable(),
   listing_type: z.enum(["sale", "rent", "lease", "short_let"]),
-  property_type_id: z.string().uuid().optional().nullable(),
+  property_type_id: z.string().min(2).max(80).default("Residential"),
   status: z
     .enum(["draft", "published", "under_offer", "sold", "rented", "archived"])
     .default("draft"),
