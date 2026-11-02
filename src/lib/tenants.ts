@@ -38,7 +38,10 @@ export async function createTenant(
        INSERT INTO tenant_memberships (tenant_id, user_id, role, status)
        SELECT id, $6, 'owner', 'active' FROM new_tenant
      )
-     SELECT * FROM new_tenant`,
+     SELECT id, name, slug, status, plan_key AS plan_id, created_at, updated_at,
+            'NG'::text AS country, 'NGN'::text AS currency,
+            'Africa/Lagos'::text AS timezone, NULL::timestamptz AS deleted_at
+       FROM new_tenant`,
     [
       input.name,
       input.slug,
