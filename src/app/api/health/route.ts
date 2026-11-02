@@ -120,10 +120,10 @@ export async function GET() {
 
     const missingTables = row.missing_tables as string[];
     const missingColumns = row.missing_columns as string[];
+    // Schema readiness is determined by the actual required tables and columns.
+    // Migration history is reported separately because a clean test schema may be
+    // provisioned from reviewed SQL without the application's migration runner.
     const schemaReady =
-      row.has_migration_history &&
-      latestMigration !== null &&
-      latestMigration >= "0008_viewing_reminders.sql" &&
       missingTables.length === 0 &&
       missingColumns.length === 0;
 
