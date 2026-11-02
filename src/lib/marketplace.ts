@@ -42,9 +42,7 @@ export async function listMarketplaceProperties(
   const clauses = [
     "p.status = 'published'",
     "t.status = 'active'",
-    "t.deleted_at IS NULL",
-    "COALESCE(ts.published, false) = true",
-  ];
+      ];
   const values: unknown[] = [];
   const add = (value: unknown) => {
     values.push(value);
@@ -68,17 +66,16 @@ export async function listMarketplaceProperties(
 
   return queryMany<MarketplaceProperty>(
     `SELECT p.id, p.tenant_id, p.title, p.slug, p.description, p.listing_type,
-            p.price, p.currency, p.price_period, p.bedrooms, p.bathrooms,
-            p.area_value, p.area_unit, p.address, p.city, p.state,
+            COALESCE(p.price, 0)::float8 AS price, p.currency, p.price_period, p.bedrooms, p.bathrooms,
+            p.area_value::float8 AS area_value, p.area_unit, p.address_line AS address, p.city, p.state,
             t.name AS tenant_name, t.slug AS tenant_slug,
             tb.logo_url, tb.primary_color,
             media.cover_url
        FROM properties p
        JOIN tenants t ON t.id = p.tenant_id
-       JOIN tenant_settings ts ON ts.tenant_id = t.id
        LEFT JOIN tenant_branding tb ON tb.tenant_id = t.id
        LEFT JOIN LATERAL (
-         SELECT pm.url AS cover_url
+         SELECT pm.public_url AS cover_url
            FROM property_media pm
           WHERE pm.property_id = p.id
             AND pm.tenant_id = p.tenant_id
@@ -99,17 +96,16 @@ export async function getMarketplaceProperty(
 ): Promise<MarketplaceProperty | null> {
   const rows = await queryMany<MarketplaceProperty>(
     `SELECT p.id, p.tenant_id, p.title, p.slug, p.description, p.listing_type,
-            p.price, p.currency, p.price_period, p.bedrooms, p.bathrooms,
-            p.area_value, p.area_unit, p.address, p.city, p.state,
+            COALESCE(p.price, 0)::float8 AS price, p.currency, p.price_period, p.bedrooms, p.bathrooms,
+            p.area_value::float8 AS area_value, p.area_unit, p.address_line AS address, p.city, p.state,
             t.name AS tenant_name, t.slug AS tenant_slug,
             tb.logo_url, tb.primary_color,
             media.cover_url
        FROM properties p
        JOIN tenants t ON t.id = p.tenant_id
-       JOIN tenant_settings ts ON ts.tenant_id = t.id
        LEFT JOIN tenant_branding tb ON tb.tenant_id = t.id
        LEFT JOIN LATERAL (
-         SELECT pm.url AS cover_url
+         SELECT pm.public_url AS cover_url
            FROM property_media pm
           WHERE pm.property_id = p.id
             AND pm.tenant_id = p.tenant_id
@@ -118,8 +114,7 @@ export async function getMarketplaceProperty(
           LIMIT 1
        ) media ON true
       WHERE t.slug = $1 AND p.slug = $2
-        AND t.status = 'active' AND t.deleted_at IS NULL
-        AND COALESCE(ts.published, false) = true
+        AND t.status = 'active'
         AND p.status = 'published'
       LIMIT 1`,
     [tenantSlug, propertySlug]
