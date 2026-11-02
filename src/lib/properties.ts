@@ -69,7 +69,16 @@ export async function getPropertyById(
   propertyId: string
 ): Promise<Property | null> {
   return queryOne<Property>(
-    `SELECT * FROM properties WHERE id = $1 AND tenant_id = $2`,
+    `SELECT p.*, p.property_type AS property_type_id, p.address_line AS address,
+            media.cover_url
+       FROM properties p
+       LEFT JOIN LATERAL (
+         SELECT pm.public_url AS cover_url
+           FROM property_media pm
+          WHERE pm.property_id = p.id AND pm.tenant_id = p.tenant_id AND pm.media_type = 'image'
+          ORDER BY pm.is_cover DESC, pm.sort_order ASC LIMIT 1
+       ) media ON true
+      WHERE p.id = $1 AND p.tenant_id = $2`,
     [propertyId, tenantId]
   );
 }
@@ -79,7 +88,16 @@ export async function getPropertyBySlug(
   slug: string
 ): Promise<Property | null> {
   return queryOne<Property>(
-    `SELECT * FROM properties WHERE slug = $1 AND tenant_id = $2`,
+    `SELECT p.*, p.property_type AS property_type_id, p.address_line AS address,
+            media.cover_url
+       FROM properties p
+       LEFT JOIN LATERAL (
+         SELECT pm.public_url AS cover_url
+           FROM property_media pm
+          WHERE pm.property_id = p.id AND pm.tenant_id = p.tenant_id AND pm.media_type = 'image'
+          ORDER BY pm.is_cover DESC, pm.sort_order ASC LIMIT 1
+       ) media ON true
+      WHERE p.slug = $1 AND p.tenant_id = $2`,
     [slug, tenantId]
   );
 }
