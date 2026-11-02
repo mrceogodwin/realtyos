@@ -3,10 +3,10 @@
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
 import { z } from "zod";
-import { getTenantBySlug, getTenantSettings } from "@/lib/tenants";
+import { queryOne, DatabaseNotConfiguredError } from "@/lib/db";
 import { getPropertyBySlug } from "@/lib/properties";
 import { createLead } from "@/lib/leads";
-import { DatabaseNotConfiguredError, queryOne } from "@/lib/db";
+
 
 export type ActionResult<
   T = unknown
@@ -55,7 +55,7 @@ export async function createPublicEnquiryAction(
   }
 
   try {
-    const tenant = await getTenantBySlug(workspaceSlug);
+    const tenant = await queryOne<{ id: string; status: string }>(\n      "SELECT id, status FROM tenants WHERE slug = $1 LIMIT 1",\n      [workspaceSlug]\n    );
     if (!tenant || tenant.status !== "active") {
       return {
         ok: false,
