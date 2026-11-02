@@ -2,7 +2,7 @@ import { listMarketplaceProperties } from "@/lib/marketplace";
 import { MarketplaceHome } from "@/components/marketplace-home";
 import { DatabaseNotConfiguredError } from "@/lib/db";
 
-type SearchParams = Promise<{ q?: string; listingType?: string; city?: string; state?: string }>;
+type SearchParams = Promise<{ q?: string; listingType?: string; propertyType?: string; city?: string; state?: string }>;
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +11,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const filters = {
     q: params.q ?? "",
     listingType: params.listingType ?? "",
+    propertyType: params.propertyType ?? "",
     city: params.city ?? "",
     state: params.state ?? "",
   };
@@ -20,6 +21,7 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
     properties = await listMarketplaceProperties({
       q: filters.q,
       listingType: filters.listingType,
+      propertyType: filters.propertyType,
       city: filters.city,
       state: filters.state,
       limit: 24,
