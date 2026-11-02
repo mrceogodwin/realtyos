@@ -24,7 +24,7 @@ export function PropertyEditForm({ property }: { property: Property }) {
         slug: makeSlug(title),
         description: String(formData.get("description") || "").trim() || null,
         listing_type: String(formData.get("listing_type") || "sale"),
-        property_type_id: property.property_type_id,
+        property_type_id: String(formData.get("property_type") || property.property_type_id || "Residential"),
         status: property.status,
         price: rawPrice,
         currency: property.currency || "NGN",
@@ -38,7 +38,7 @@ export function PropertyEditForm({ property }: { property: Property }) {
         address: String(formData.get("address") || "").trim() || null,
         city: String(formData.get("city") || "").trim() || null,
         state: String(formData.get("state") || "").trim() || null,
-        country: property.country || "NG",
+        country: property.country || "Nigeria",
         features: property.features || [],
         assigned_agent_id: property.assigned_agent_id,
       },
@@ -70,6 +70,7 @@ export function PropertyEditForm({ property }: { property: Property }) {
             <form action={submit}>
               <label>Property name<input name="title" required minLength={3} maxLength={200} defaultValue={property.title} /></label>
               <div className="form-two">
+                <label>Property type<select name="property_type" defaultValue={property.property_type_id || "Residential"}><option>Residential</option><option>Apartment</option><option>Duplex</option><option>Detached house</option><option>Land</option><option>Commercial</option><option>Office</option><option>Warehouse</option><option>Industrial</option></select></label>
                 <label>Listing type<select name="listing_type" defaultValue={property.listing_type}><option value="sale">For sale</option><option value="rent">For rent</option><option value="lease">For lease</option><option value="short_let">Short let</option></select></label>
                 <label>Asking price<input name="price" type="number" min="0" step="0.01" required defaultValue={property.price} /></label>
               </div>
