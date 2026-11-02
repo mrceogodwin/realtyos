@@ -26,18 +26,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const providerId = `google:${account.providerAccountId}`;
         const row = await queryOne<UserRow>(
           `INSERT INTO user_profiles
-             (auth_provider_id, email, email_verified, full_name, avatar_url, last_login_at)
-           VALUES ($1, lower($2), true, $3, $4, now())
-           ON CONFLICT (lower(email)) WHERE status <> 'deleted'
+             (auth_provider, auth_subject, email, full_name, avatar_url)
+           VALUES ('google', $1, lower($2), $3, $4)
+           ON CONFLICT (email)
            DO UPDATE SET
-             auth_provider_id = COALESCE(user_profiles.auth_provider_id, EXCLUDED.auth_provider_id),
-             email_verified = true,
+             auth_provider = 'google',
+             auth_subject = EXCLUDED.auth_subject,
              full_name = COALESCE(EXCLUDED.full_name, user_profiles.full_name),
              avatar_url = COALESCE(EXCLUDED.avatar_url, user_profiles.avatar_url),
-             last_login_at = now(),
              updated_at = now()
            RETURNING id, status`,
-          [providerId, String(profile.email), profile.name ?? null, profile.picture ?? null]
+          [account.providerAccountId, String(profile.email), profile.name ?? null, profile.picture ?? null]
         );
         if (!row || row.status !== "active") throw new Error("Account unavailable");
         token.id = row.id;
