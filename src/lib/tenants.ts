@@ -22,8 +22,8 @@ export async function createTenant(
 ): Promise<Tenant> {
   const clientResult = await query(
     `WITH new_tenant AS (
-       INSERT INTO tenants (name, slug, country, currency, timezone)
-       VALUES ($1, $2, $3, $4, $5)
+       INSERT INTO tenants (name, slug)
+       VALUES ($1, $2)
        RETURNING *
      ),
      branding AS (
@@ -31,8 +31,8 @@ export async function createTenant(
        SELECT id FROM new_tenant
      ),
      settings AS (
-       INSERT INTO tenant_settings (tenant_id)
-       SELECT id FROM new_tenant
+       INSERT INTO tenant_settings (tenant_id, settings)
+       SELECT id, jsonb_build_object('country', $3, 'currency', $4, 'timezone', $5) FROM new_tenant
      ),
      membership AS (
        INSERT INTO tenant_memberships (tenant_id, user_id, role, status, accepted_at)
@@ -135,20 +135,36 @@ export async function updateTenantSettings(
   }>
 ): Promise<TenantSettings | null> {
   return queryOne<TenantSettings>(
-    `UPDATE tenant_settings
-     SET
-       contact_email = COALESCE($2, contact_email),
-       contact_phone = COALESCE($3, contact_phone),
-       address = COALESCE($4, address),
-       city = COALESCE($5, city),
-       state = COALESCE($6, state),
-       seo_title = COALESCE($7, seo_title),
-       seo_description = COALESCE($8, seo_description),
-       custom_domain = COALESCE($9, custom_domain),
-       published = COALESCE($10, published),
-       updated_at = now()
-     WHERE tenant_id = $1
-     RETURNING *`,
+    `WITH tenant_update AS (
+       UPDATE tenants SET custom_domain = COALESCE($9, custom_domain)
+        WHERE id = $1
+     ),
+     settings_update AS (
+       UPDATE tenant_settings
+          SET settings = settings || jsonb_strip_nulls(jsonb_build_object(
+                'contact_email', $2, 'contact_phone', $3, 'address', $4,
+                'city', $5, 'state', $6, 'published', $10
+              )),
+              seo_settings = seo_settings || jsonb_strip_nulls(jsonb_build_object(
+                'title', $7, 'description', $8
+              )),
+              updated_at = now()
+        WHERE tenant_id = $1
+        RETURNING tenant_id, settings, seo_settings, updated_at
+     )
+     SELECT su.tenant_id,
+            COALESCE(su.settings->>'contact_email', t.contact_email) AS contact_email,
+            COALESCE(su.settings->>'contact_phone', t.contact_phone) AS contact_phone,
+            su.settings->>'address' AS address,
+            su.settings->>'city' AS city,
+            su.settings->>'state' AS state,
+            COALESCE(su.settings->'social_links', '{}'::jsonb) AS social_links,
+            su.seo_settings->>'title' AS seo_title,
+            su.seo_settings->>'description' AS seo_description,
+            t.custom_domain, false AS domain_verified,
+            COALESCE((su.settings->>'published')::boolean, t.status = 'active') AS published,
+            su.updated_at
+       FROM settings_update su JOIN tenants t ON t.id = su.tenant_id`,
     [
       tenantId,
       data.contact_email ?? null,
