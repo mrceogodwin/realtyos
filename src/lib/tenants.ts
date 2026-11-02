@@ -69,8 +69,8 @@ export async function getTenantSettings(
 ): Promise<TenantSettings | null> {
   return queryOne<TenantSettings>(
     `SELECT ts.tenant_id,
-            ts.settings->>'contact_email' AS contact_email,
-            ts.settings->>'contact_phone' AS contact_phone,
+            COALESCE(ts.settings->>'contact_email', t.contact_email) AS contact_email,
+            COALESCE(ts.settings->>'contact_phone', t.contact_phone) AS contact_phone,
             ts.settings->>'address' AS address,
             ts.settings->>'city' AS city,
             ts.settings->>'state' AS state,
@@ -156,8 +156,8 @@ export async function updateTenantSettings(
         RETURNING tenant_id, settings, seo_settings, updated_at
      )
      SELECT su.tenant_id,
-            su.settings->>'contact_email' AS contact_email,
-            su.settings->>'contact_phone' AS contact_phone,
+            COALESCE(su.settings->>'contact_email', t.contact_email) AS contact_email,
+            COALESCE(su.settings->>'contact_phone', t.contact_phone) AS contact_phone,
             su.settings->>'address' AS address,
             su.settings->>'city' AS city,
             su.settings->>'state' AS state,
