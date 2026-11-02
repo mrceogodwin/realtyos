@@ -3,6 +3,27 @@ import { getPool } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+const requiredTables = [
+  "platform_settings",
+  "tenants",
+  "tenant_branding",
+  "tenant_settings",
+  "user_profiles",
+  "tenant_memberships",
+  "property_types",
+  "properties",
+  "property_media",
+  "saved_properties",
+  "leads",
+  "property_viewings",
+  "tenant_pages",
+  "subscriptions",
+  "audit_logs",
+  "tenant_invitations",
+  "public_enquiry_rate_limits",
+  "viewing_reminder_deliveries",
+] as const;
+
 const requiredColumns = [
   ["user_profiles", "auth_provider_id"],
   ["user_profiles", "email_verified"],
@@ -22,6 +43,18 @@ const requiredColumns = [
   ["property_viewings", "agent_id"],
   ["property_viewings", "duration_minutes"],
   ["property_viewings", "created_by"],
+  ["tenant_settings", "contact_email"],
+  ["tenant_settings", "contact_phone"],
+  ["tenant_settings", "address"],
+  ["tenant_settings", "seo_title"],
+  ["tenant_settings", "seo_description"],
+  ["tenant_settings", "custom_domain"],
+  ["tenant_settings", "published"],
+  ["tenant_pages", "slug"],
+  ["tenant_pages", "published"],
+  ["subscriptions", "plan_code"],
+  ["subscriptions", "cancel_at_period_end"],
+  ["subscriptions", "metadata"],
   ["audit_logs", "actor_id"],
 ] as const;
 
@@ -45,10 +78,21 @@ export async function GET() {
          current_database() AS database_name,
          now() AS checked_at,
          to_regclass('public.schema_migrations') IS NOT NULL AS has_migration_history,
-         to_regclass('public.viewing_reminder_deliveries') IS NOT NULL AS has_reminder_table,
+         ARRAY(
+           SELECT required.table_name
+             FROM unnest($1::text[]) AS required(table_name)
+            WHERE NOT EXISTS (
+              SELECT 1
+                FROM information_schema.tables actual
+               WHERE actual.table_schema = 'public'
+                 AND actual.table_type = 'BASE TABLE'
+                 AND actual.table_name = required.table_name
+            )
+            ORDER BY required.table_name
+         ) AS missing_tables,
          ARRAY(
            SELECT format('%s.%s', required.table_name, required.column_name)
-             FROM unnest($1::text[], $2::text[]) AS required(table_name, column_name)
+             FROM unnest($2::text[], $3::text[]) AS required(table_name, column_name)
             WHERE NOT EXISTS (
               SELECT 1
                 FROM information_schema.columns actual
@@ -58,7 +102,11 @@ export async function GET() {
             )
             ORDER BY required.table_name, required.column_name
          ) AS missing_columns`,
-      [requiredColumns.map(([table]) => table), requiredColumns.map(([, column]) => column)]
+      [
+        [...requiredTables],
+        requiredColumns.map(([table]) => table),
+        requiredColumns.map(([, column]) => column),
+      ]
     );
 
     const row = result.rows[0];
@@ -70,13 +118,23 @@ export async function GET() {
       latestMigration = history.rows[0]?.latest_migration ?? null;
     }
 
+    const missingTables = row.missing_tables as string[];
     const missingColumns = row.missing_columns as string[];
     const schemaReady =
       row.has_migration_history &&
-      row.has_reminder_table &&
       latestMigration !== null &&
       latestMigration >= "0008_viewing_reminders.sql" &&
+      missingTables.length === 0 &&
       missingColumns.length === 0;
+
+    if (!schemaReady) {
+      console.error("[health] database schema is incomplete", {
+        latestMigration,
+        missingTables,
+        missingColumns,
+        hasMigrationHistory: row.has_migration_history,
+      });
+    }
 
     return NextResponse.json(
       {
@@ -86,14 +144,11 @@ export async function GET() {
         databaseName: row.database_name,
         checkedAt: row.checked_at,
         schema: schemaReady ? "ready" : "pending_migration",
-        latestMigration,
-        missingColumns,
-        missingReminderTable: !row.has_reminder_table,
-        missingMigrationHistory: !row.has_migration_history,
       },
       { status: schemaReady ? 200 : 503 }
     );
-  } catch {
+  } catch (error) {
+    console.error("[health] database health check failed", error);
     return NextResponse.json(
       {
         status: "database_error",
