@@ -19,8 +19,8 @@ export default async function AppOverviewPage() {
       `SELECT
         (SELECT count(*)::text FROM properties WHERE tenant_id = $1 AND status <> 'archived') AS properties,
         (SELECT count(*)::text FROM leads WHERE tenant_id = $1 AND status NOT IN ('won','lost','spam')) AS leads,
-        (SELECT count(*)::text FROM property_viewings WHERE tenant_id = $1 AND status IN ('requested','confirmed','rescheduled') AND scheduled_at >= now()) AS viewings,
-        (SELECT COALESCE(sum(price),0)::text FROM properties WHERE tenant_id = $1 AND status = 'published' AND listing_type = 'sale') AS portfolio`,
+        (SELECT count(*)::text FROM property_viewings WHERE tenant_id = $1 AND status IN ('requested','confirmed') AND scheduled_at >= now()) AS viewings,
+        (SELECT COALESCE(sum(price),0)::text FROM properties WHERE tenant_id = $1 AND status = 'published' AND listing_type = 'sale') AS portfolio,\n        (SELECT count(*)::text FROM leads WHERE tenant_id = $1 AND status NOT IN ('won','lost','spam') AND follow_up_at IS NOT NULL AND follow_up_at < now()) AS overdue_followups`,
       [context.tenant.id]
     );
   } catch (error) {
@@ -34,7 +34,7 @@ export default async function AppOverviewPage() {
         <Metric title="Total properties" value={counts?.properties ?? "—"} note="Not archived" icon={<Building2 size={18} />} />
         <Metric title="Active leads" value={counts?.leads ?? "—"} note="Open pipeline" icon={<Users size={18} />} />
         <Metric title="Upcoming viewings" value={counts?.viewings ?? "—"} note="Future appointments" icon={<CalendarDays size={18} />} />
-        <Metric title="Overdue follow-ups" value={counts?.overdue_followups ?? "—"} note="Open leads past their follow-up time" icon={<CalendarDays size={18} />} />
+        <Metric title="Overdue follow-ups" value={counts?.overdue_followups ?? "0"} note="Open leads past their follow-up time" icon={<CalendarDays size={18} />} />
         <Metric title="Published sale portfolio" value={counts ? new Intl.NumberFormat("en-NG", { style: "currency", currency: context.tenant.currency || "NGN", maximumFractionDigits: 0 }).format(Number(counts.portfolio ?? 0)) : "—"} note="Published sale listings" icon={<TrendingUp size={18} />} />
       </div>
       <div className="content-grid">
