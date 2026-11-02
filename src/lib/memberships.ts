@@ -86,7 +86,9 @@ export async function updateMembershipStatus(
     `UPDATE tenant_memberships
      SET status = $1
      WHERE id = $2 AND tenant_id = $3 AND role <> 'owner'
-     RETURNING *`,
+     RETURNING id, tenant_id, user_id, role, status, invited_by,
+               NULL::timestamptz AS invited_at, NULL::timestamptz AS accepted_at,
+               created_at, NULL::timestamptz AS updated_at`,
     [status, membershipId, tenantId]
   );
 }
