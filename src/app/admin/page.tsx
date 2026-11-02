@@ -27,8 +27,8 @@ export default async function PlatformAdminPage() {
       <a className="admin-brand" href="/admin"><span className="brand-symbol">⌂</span><span><b>Realty<span>OS</span></b><small>PLATFORM CONTROL</small></span></a>
       <div className="platform-chip"><span className="chip-icon">R</span><span><b>RealtyOS Platform</b><small>Super administrator</small></span><span className="push">⌄</span></div>
       <div className="nav-caption">PLATFORM</div>
-      <nav className="admin-nav"><a className="selected" href="/admin"><i>▦</i>Overview</a><a href="/admin/agencies"><i>⌂</i>Agencies & Workspaces</a><a href="/admin/plans"><i>◇</i>Plans & Subscriptions</a><a href="/admin/users"><i>♙</i>Users & Access</a><a href="/admin/billing"><i>▤</i>Payments & Billing</a><a href="/admin/analytics"><i>▥</i>Platform Analytics</a><a href="/admin/support"><i>☏</i>Support Centre</a></nav>
-      <div className="nav-caption system-caption">SYSTEM</div><nav className="admin-nav"><a href="/admin/settings"><i>⚙</i>Platform Settings</a><a href="/admin/audit-logs"><i>◷</i>Audit Logs</a></nav>
+      <nav className="admin-nav"><a className="selected" href="/admin"><i>▦</i>Overview</a><a href="/admin/agencies"><i>⌂</i>Agencies & Workspaces</a><a href="#modules"><i>◇</i>Plans & Subscriptions</a><a href="#modules"><i>♙</i>Users & Access</a><a href="#modules"><i>▤</i>Payments & Billing</a><a href="#modules"><i>▥</i>Platform Analytics</a><a href="#modules"><i>☏</i>Support Centre</a></nav>
+      <div className="nav-caption system-caption">SYSTEM</div><nav className="admin-nav"><a href="#modules"><i>⚙</i>Platform Settings</a><a href="#modules"><i>◷</i>Audit Logs</a></nav>
       <div className="sidebar-bottom"><div className="secure-note"><b>◈ &nbsp; Platform protected</b><small>Administrator access only</small></div><a className="workspace-link" href="/app">↗ &nbsp; Open company workspace</a><div className="admin-identity"><span className="identity-avatar">GO</span><span><b>Platform Admin</b><small>Super administrator</small></span></div></div>
     </aside>
     <section className="admin-main">
