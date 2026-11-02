@@ -18,6 +18,40 @@ const client = new Client({
 async function main() {
   await client.connect();
   await client.query("SELECT pg_advisory_lock(824731905)");
+
+  // Never replay the initial schema over an existing, untracked database.
+  // This protects manually-created or legacy schemas from partial migration attempts.
+  const state = await client.query(`
+    SELECT
+      to_regclass('public.schema_migrations') IS NOT NULL AS has_migration_table,
+      EXISTS (
+        SELECT 1
+          FROM information_schema.tables
+         WHERE table_schema = 'public'
+           AND table_type = 'BASE TABLE'
+           AND table_name <> 'schema_migrations'
+      ) AS has_existing_tables
+  `);
+
+  if (state.rows[0].has_existing_tables) {
+    if (!state.rows[0].has_migration_table) {
+      throw new Error(
+        "Existing application tables were found without schema_migrations history. " +
+        "Refusing to run the initial migration. Use a new empty database or a reviewed reconciliation plan."
+      );
+    }
+
+    const history = await client.query(
+      "SELECT count(*)::int AS count FROM schema_migrations"
+    );
+    if (history.rows[0].count === 0) {
+      throw new Error(
+        "Existing application tables were found with an empty schema_migrations table. " +
+        "Refusing to guess which migrations were applied. Reconcile the database baseline first."
+      );
+    }
+  }
+
   await client.query(
     "CREATE TABLE IF NOT EXISTS schema_migrations (" +
     "version TEXT PRIMARY KEY, " +
