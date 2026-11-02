@@ -52,6 +52,7 @@ export async function inviteMember(
           status = 'invited',
           invited_by = EXCLUDED.invited_by,
           created_at = tenant_memberships.created_at
+      WHERE tenant_memberships.status = 'invited'
     RETURNING id, tenant_id, user_id, role, status, invited_by,
               NULL::timestamptz AS invited_at, NULL::timestamptz AS accepted_at,
               created_at, NULL::timestamptz AS updated_at`,
@@ -69,7 +70,9 @@ export async function updateMembershipRole(
     `UPDATE tenant_memberships
      SET role = $1
      WHERE id = $2 AND tenant_id = $3 AND role <> 'owner'
-     RETURNING *`,
+     RETURNING id, tenant_id, user_id, role, status, invited_by,
+               NULL::timestamptz AS invited_at, NULL::timestamptz AS accepted_at,
+               created_at, NULL::timestamptz AS updated_at`,
     [role, membershipId, tenantId]
   );
 }
