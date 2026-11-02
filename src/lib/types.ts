@@ -131,6 +131,7 @@ export interface Property {
   description: string | null;
   listing_type: ListingType;
   property_type_id: string | null;
+  cover_url?: string | null;
   status: PropertyStatus;
   price: number;
   currency: string;
