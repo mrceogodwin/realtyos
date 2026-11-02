@@ -25,6 +25,7 @@ export default async function TeamPage() {
   let members: TeamMember[] = [];
   let invitations: TeamInvitation[] = [];
   let databaseUnavailable = false;
+  let invitationsSchemaMissing = false;
   try {
     members = await queryMany<TeamMember>(
       `SELECT m.id, u.full_name, u.email, m.role, m.status
@@ -44,6 +45,7 @@ export default async function TeamPage() {
     }
   } catch (error) {
     if (error instanceof DatabaseNotConfiguredError) databaseUnavailable = true;
+    else if (canManage && typeof error === "object" && error !== null && "code" in error && error.code === "42P01") invitationsSchemaMissing = true;
     else throw error;
   }
 
@@ -83,8 +85,8 @@ export default async function TeamPage() {
       {!canManage && <p className="empty-state"><Users size={16} /> You have view access to the team. Workspace admins manage invitations and roles.</p>}
       {canManage && (
         <section className="panel">
-          <div className="panel-heading"><div><h2>Invitations</h2><p>Secure invitation creation and email delivery are not enabled yet.</p></div></div>
-          <p className="empty-state">Create a single-use invitation link for a specific email address. Links expire after seven days and require the invited person to sign in with that verified email.</p><TeamInvitationList invitations={invitations} /><TeamInviteForm canInviteAdmin={context.membership.role === "owner"} />
+          <div className="panel-heading"><div><h2>Invitations</h2><p>Invite team members using secure, expiring links.</p></div></div>
+          {invitationsSchemaMissing ? <p className="empty-state">The invitation database migration has not been applied yet. Team invitations will become available after the platform administrator applies the reviewed migration.</p> : <><p className="empty-state">Create a single-use invitation link for a specific email address. Links expire after seven days and require the invited person to sign in with that verified email.</p><TeamInvitationList invitations={invitations} /><TeamInviteForm canInviteAdmin={context.membership.role === "owner"} /></>}
         </section>
       )}
     </AppShell>
