@@ -110,7 +110,6 @@ export async function createTeamInvitationAction(raw: unknown): Promise<TeamActi
 export async function acceptTeamInvitationAction(rawToken: string): Promise<TeamActionResult<{ tenantId: string }>> {
   const context = await getCurrentAuthContext();
   if (!context) return { ok: false, error: "Sign in before accepting this invitation", code: "AUTH_REQUIRED" };
-  if (!context.user.email_verified) return { ok: false, error: "A verified email address is required", code: "EMAIL_UNVERIFIED" };
   if (!/^[a-f0-9]{64}$/i.test(rawToken)) return { ok: false, error: "Invitation link is invalid", code: "INVALID_TOKEN" };
 
   const tokenHash = createHash("sha256").update(rawToken).digest("hex");
