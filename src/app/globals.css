@@ -138,3 +138,10 @@ html,body{background:#080d0c;color:#f2f6f2}
 .marketing .m-cta-band{background:linear-gradient(120deg,#18291a,#0d1711);border-top:1px solid #465c31;border-bottom:1px solid #465c31}.marketing .m-cta-band .primary-button{background:#b7ff24;color:#14200b;border-color:#b7ff24}.marketing .m-footer{background:#080d0c;border-color:#293730}.marketing .m-footer-inner p,.marketing .m-footer-links a{color:#9eaca2}
 .marketing .primary-button{background:#b7ff24;color:#14200b;border-color:#b7ff24}.marketing .secondary-button{background:#111a15;color:#e8f0e9;border-color:#536257}
 @media(max-width:940px){.marketing .m-links a:not(.m-cta){display:none}}
+
+/* Real listing photography: use uploaded cover images instead of decorative placeholders. */
+.property-visual img,.pub-detail-visual img{width:100%;height:100%;display:block;object-fit:cover}
+.property-visual:has(img){background:#111916}
+.pub-detail-visual{overflow:hidden;background:#111916}
+.pub-detail-visual img{min-height:260px;max-height:560px}
+@media(max-width:600px){.pub-detail-visual img{min-height:210px;max-height:360px}}
