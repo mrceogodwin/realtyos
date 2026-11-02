@@ -124,7 +124,7 @@ export default async function PublicTenantSitePage({ params }: Props) {
                   href={`/s/${slug}/${p.slug}`}
                   className="pub-card"
                 >
-                  <div className="pub-card-visual" />
+                  <div className="pub-card-visual">{p.cover_url ? <img src={p.cover_url} alt={p.title} loading="lazy" /> : <span>{p.title}</span>}</div>
                   <div className="pub-card-body">
                     <h3>{p.title}</h3>
                     <div className="pub-card-loc">
