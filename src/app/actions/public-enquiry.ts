@@ -55,7 +55,10 @@ export async function createPublicEnquiryAction(
   }
 
   try {
-    const tenant = await queryOne<{ id: string; status: string }>(\n      "SELECT id, status FROM tenants WHERE slug = $1 LIMIT 1",\n      [workspaceSlug]\n    );
+    const tenant = await queryOne<{ id: string; status: string }>(
+      "SELECT id, status FROM tenants WHERE slug = $1 LIMIT 1",
+      [workspaceSlug]
+    );
     if (!tenant || tenant.status !== "active") {
       return {
         ok: false,
