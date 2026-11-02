@@ -21,7 +21,7 @@ export function MarketplaceHome({ properties, totalLabel, filters }: Props) {
   return (
     <main className="marketplace">
       <header className="market-nav">
-        <Link href="/" className="market-brand"><span className="market-mark"><Building2 size={24}/></span><span><b>Realty<span>OS</span></b><small>NIGERIA PROPERTY MARKETPLACE</small></span></Link>
+        <Link href="/marketplace" className="market-brand"><span className="market-mark"><Building2 size={24}/></span><span><b>Realty<span>OS</span></b><small>NIGERIA PROPERTY MARKETPLACE</small></span></Link>
         <nav><a href="#properties">Properties</a><a href="#how">How it works</a><Link href="/for-agencies">For agencies</Link><a href="#companies">Companies</a></nav>
         <div className="market-nav-actions"><Link className="market-login" href="/login">Sign in</Link><Link className="market-cta" href="/onboarding">List your property <ArrowUpRight size={15}/></Link></div>
       </header>
@@ -34,7 +34,7 @@ export function MarketplaceHome({ properties, totalLabel, filters }: Props) {
             <div className="market-eyebrow"><ShieldCheck size={14}/> DISCOVER PROPERTIES FROM REAL ESTATE COMPANIES</div>
             <h1>Find a place to<br/> <em>call your own.</em></h1>
             <p>Explore homes, land and commercial properties published by real estate companies across Nigeria — all in one place.</p>
-            <form className="market-search" action="/" method="get">
+            <form className="market-search" action="/marketplace" method="get">
               <div className="market-tabs">{categories.map(([value,label])=><button key={value} type="button" className={active===value?"active":""} onClick={()=>setActive(value)}>{label}</button>)}</div>
               <input type="hidden" name="listingType" value={active}/>
               <label><MapPin size={17}/><span>Location</span><input name="city" defaultValue={filters.city} placeholder="City or area"/></label>
