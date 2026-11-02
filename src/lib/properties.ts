@@ -37,10 +37,18 @@ export async function listProperties(options: PropertyListOptions): Promise<Prop
   params.push(limit, offset);
 
   return queryMany<Property>(
-    `SELECT * FROM properties
-     WHERE ${where}
-     ORDER BY updated_at DESC
-     LIMIT $${idx} OFFSET $${idx + 1}`,
+    `SELECT p.*, p.property_type AS property_type_id, p.address_line AS address,
+            media.cover_url
+       FROM properties p
+       LEFT JOIN LATERAL (
+         SELECT pm.public_url AS cover_url
+           FROM property_media pm
+          WHERE pm.property_id = p.id AND pm.tenant_id = p.tenant_id AND pm.media_type = 'image'
+          ORDER BY pm.is_cover DESC, pm.sort_order ASC, pm.created_at ASC LIMIT 1
+       ) media ON true
+      WHERE ${where.replaceAll('tenant_id', 'p.tenant_id').replaceAll('status', 'p.status').replaceAll('title', 'p.title').replaceAll('city', 'p.city').replaceAll('address', 'p.address_line')}
+      ORDER BY p.updated_at DESC
+      LIMIT ${idx} OFFSET ${idx + 1}`,
     params
   );
 }
@@ -92,9 +100,9 @@ export async function createProperty(
 
   const result = await query<Property>(
     `INSERT INTO properties (
-      tenant_id, title, slug, description, listing_type, property_type_id,
+      tenant_id, title, slug, description, listing_type, property_type,
       status, price, currency, price_period, bedrooms, bathrooms, toilets,
-      parking_spaces, area_value, area_unit, address, city, state, country,
+      parking_spaces, area_value, area_unit, address_line, city, state, country,
       features, assigned_agent_id, created_by, published_at
     ) VALUES (
       $1, $2, $3, $4, $5, $6,
@@ -188,9 +196,9 @@ export async function updateProperty(
   return queryOne<Property>(
     `UPDATE properties SET
        title = $1, slug = $2, description = $3, listing_type = $4,
-       property_type_id = $5, price = $6, currency = $7, price_period = $8,
+       property_type = $5, price = $6, currency = $7, price_period = $8,
        bedrooms = $9, bathrooms = $10, toilets = $11, parking_spaces = $12,
-       area_value = $13, area_unit = $14, address = $15, city = $16,
+       area_value = $13, area_unit = $14, address_line = $15, city = $16,
        state = $17, country = $18, features = $19::jsonb,
        assigned_agent_id = $20, updated_at = now()
      WHERE id = $21 AND tenant_id = $22
