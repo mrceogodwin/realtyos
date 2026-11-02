@@ -20,10 +20,11 @@ export function PropertyCreateForm() {
       title,
       slug: makeSlug(title),
       listing_type: String(formData.get("listing_type") || "sale"),
+      property_type_id: String(formData.get("property_type") || "Residential"),
       status: "draft",
       price: rawPrice,
       currency: "NGN",
-      country: "NG",
+      country: "Nigeria",
       address: String(formData.get("address") || "").trim() || null,
       city: String(formData.get("city") || "").trim() || null,
       state: String(formData.get("state") || "").trim() || null,
@@ -54,6 +55,7 @@ export function PropertyCreateForm() {
             <form action={submit}>
               <label>Property name<input name="title" required minLength={3} maxLength={200} placeholder="e.g. Meridian Residence" /></label>
               <div className="form-two">
+                <label>Property type<select name="property_type" defaultValue="Residential"><option>Residential</option><option>Apartment</option><option>Duplex</option><option>Detached house</option><option>Land</option><option>Commercial</option><option>Office</option><option>Warehouse</option><option>Industrial</option></select></label>
                 <label>Listing type<select name="listing_type" defaultValue="sale"><option value="sale">For sale</option><option value="rent">For rent</option><option value="lease">For lease</option><option value="short_let">Short let</option></select></label>
                 <label>Asking price (₦)<input name="price" type="number" min="0" step="0.01" required placeholder="285000000" /></label>
               </div>
