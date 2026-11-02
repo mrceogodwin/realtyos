@@ -103,7 +103,7 @@ async function getTenantMembershipForUser(tenantId: string, userId: string) {
        FROM tenant_memberships m
        JOIN tenants t ON t.id = m.tenant_id
       WHERE m.tenant_id = $1 AND m.user_id = $2
-        AND t.status = 'active' AND t.deleted_at IS NULL
+        AND t.status = 'active'
       LIMIT 1`,
     [tenantId, userId]
   );
