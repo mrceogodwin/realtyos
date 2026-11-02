@@ -88,7 +88,7 @@ export async function listMarketplaceProperties(
        ) media ON true
       WHERE ${clauses.join(" AND ")}
       ORDER BY p.published_at DESC NULLS LAST, p.created_at DESC
-      LIMIT $ ${values.length}`.replace("LIMIT $ ", "LIMIT $"),
+      LIMIT ${values.length}`,
     values
   );
 }
