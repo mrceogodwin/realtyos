@@ -33,8 +33,10 @@ export async function getCurrentAuthContext(): Promise<AuthContext | null> {
   if (!userId) return null;
 
   const user = await queryOne<UserProfile>(
-    `SELECT id, auth_provider_id, email, email_verified, full_name, avatar_url,
-            phone, status, platform_role, created_at, updated_at, last_login_at
+    `SELECT id,
+            CASE WHEN auth_subject IS NOT NULL THEN auth_provider || ':' || auth_subject ELSE NULL END AS auth_provider_id,
+            email, true AS email_verified, full_name, avatar_url, phone, status,
+            platform_role, created_at, updated_at, NULL::timestamptz AS last_login_at
        FROM user_profiles
       WHERE id = $1 AND status = 'active'
       LIMIT 1`,
