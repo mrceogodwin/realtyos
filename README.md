@@ -96,6 +96,8 @@ The initial migration creates the platform and tenant foundation:
 
 Business records are tenant-scoped. Server actions and APIs must derive tenant identity from the authenticated server-side context; never trust a tenant ID supplied by the browser.
 
+**Existing database safety:** Do not run the initial migration against a database that already contains application tables but has no verified migration history. The migration runner refuses this situation rather than guessing. Use a new empty database or a reviewed, data-preserving reconciliation plan. Preserve any existing platform settings and records during recovery.
+
 ## Quality checks
 
 \`\`\`bash
