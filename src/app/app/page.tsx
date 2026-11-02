@@ -34,7 +34,8 @@ export default async function AppOverviewPage() {
         <Metric title="Total properties" value={counts?.properties ?? "—"} note="Not archived" icon={<Building2 size={18} />} />
         <Metric title="Active leads" value={counts?.leads ?? "—"} note="Open pipeline" icon={<Users size={18} />} />
         <Metric title="Upcoming viewings" value={counts?.viewings ?? "—"} note="Future appointments" icon={<CalendarDays size={18} />} />
-        <Metric title="Overdue follow-ups" value={counts?.overdue_followups ?? "—"} note="Open leads past their follow-up time" icon={<CalendarDays size={18} />} />\n        <Metric title="Published sale portfolio" value={counts ? new Intl.NumberFormat("en-NG", { style: "currency", currency: context.tenant.currency || "NGN", maximumFractionDigits: 0 }).format(Number(counts.portfolio ?? 0)) : "—"} note="Published sale listings" icon={<TrendingUp size={18} />} />
+        <Metric title="Overdue follow-ups" value={counts?.overdue_followups ?? "—"} note="Open leads past their follow-up time" icon={<CalendarDays size={18} />} />
+        <Metric title="Published sale portfolio" value={counts ? new Intl.NumberFormat("en-NG", { style: "currency", currency: context.tenant.currency || "NGN", maximumFractionDigits: 0 }).format(Number(counts.portfolio ?? 0)) : "—"} note="Published sale listings" icon={<TrendingUp size={18} />} />
       </div>
       <div className="content-grid">
         <section className="panel">
