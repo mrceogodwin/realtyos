@@ -44,7 +44,13 @@ function PropertyCard({ property, canManage }: { property: Property; canManage: 
 
   return (
     <article className="property-row">
-      <div className="property-visual villa"><div className="visual-sun" /><div className="visual-building"><span /><span /><span /></div><div className="visual-initials">RO</div></div>
+      <div className="property-visual villa">
+        {property.cover_url ? (
+          <img src={property.cover_url} alt={property.title} loading="lazy" />
+        ) : (
+          <><div className="visual-sun" /><div className="visual-building"><span /><span /><span /></div><div className="visual-initials">RO</div></>
+        )}
+      </div>
       <div className="property-main">
         <div className="property-title-line">
           <h3>{property.title}</h3>
