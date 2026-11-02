@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./marketplace-detail.css";
 
 export const metadata: Metadata = {
   title: "RealtyOS — Real estate, under control",
