@@ -27,6 +27,7 @@ export type MarketplaceProperty = {
 export type MarketplaceFilters = {
   q?: string;
   listingType?: string;
+  propertyType?: string;
   city?: string;
   state?: string;
   minPrice?: number;
@@ -55,6 +56,9 @@ export async function listMarketplaceProperties(
   }
   if (filters.listingType && allowedListingTypes.has(filters.listingType)) {
     clauses.push(`p.listing_type = ${add(filters.listingType)}`);
+  }
+  if (filters.propertyType && ["land", "commercial"].includes(filters.propertyType)) {
+    clauses.push(`LOWER(p.property_type) LIKE ${add("%" + filters.propertyType + "%")}`);
   }
   if (filters.city?.trim()) clauses.push(`p.city ILIKE ${add("%" + filters.city.trim().slice(0, 80) + "%")}`);
   if (filters.state?.trim()) clauses.push(`p.state ILIKE ${add("%" + filters.state.trim().slice(0, 80) + "%")}`);
