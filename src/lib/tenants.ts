@@ -35,8 +35,8 @@ export async function createTenant(
        SELECT id, jsonb_build_object('country', $3, 'currency', $4, 'timezone', $5) FROM new_tenant
      ),
      membership AS (
-       INSERT INTO tenant_memberships (tenant_id, user_id, role, status, accepted_at)
-       SELECT id, $6, 'owner', 'active', now() FROM new_tenant
+       INSERT INTO tenant_memberships (tenant_id, user_id, role, status)
+       SELECT id, $6, 'owner', 'active' FROM new_tenant
      )
      SELECT * FROM new_tenant`,
     [
