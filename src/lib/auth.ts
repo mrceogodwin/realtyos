@@ -3,6 +3,30 @@ import { cookies } from "next/headers";
 import { queryOne } from "./db";
 import type { AuthContext, Tenant, TenantMembership, UserProfile } from "./types";
 
+const tenantSelect = `
+  SELECT id, name, slug, status, plan_key AS plan_id, created_at, updated_at,
+         'NG'::text AS country, 'NGN'::text AS currency,
+         'Africa/Lagos'::text AS timezone, NULL::timestamptz AS deleted_at
+    FROM tenants
+`;
+
+const membershipSelect = `
+  SELECT m.id, m.tenant_id, m.user_id, m.role, m.status, m.invited_by,
+         NULL::timestamptz AS invited_at, NULL::timestamptz AS accepted_at,
+         m.created_at, NULL::timestamptz AS updated_at
+    FROM tenant_memberships m
+    JOIN tenants t ON t.id = m.tenant_id
+   WHERE m.user_id = $1
+     AND ($2::uuid IS NULL OR m.tenant_id = $2::uuid)
+     AND m.status = 'active'
+     AND t.status = 'active'
+   ORDER BY
+     CASE m.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2
+       WHEN 'agent' THEN 3 WHEN 'editor' THEN 4 ELSE 5 END,
+     m.created_at ASC
+   LIMIT 1
+`;
+
 export async function getCurrentAuthContext(): Promise<AuthContext | null> {
   const session = await auth();
   const userId = session?.user?.id;
@@ -25,46 +49,22 @@ export async function getCurrentAuthContext(): Promise<AuthContext | null> {
     : null;
 
   let membership = await queryOne<TenantMembership>(
-    `SELECT m.id, m.tenant_id, m.user_id, m.role, m.status, m.invited_by,
-            m.invited_at, m.accepted_at, m.created_at, m.updated_at
-       FROM tenant_memberships m
-       JOIN tenants t ON t.id = m.tenant_id
-      WHERE m.user_id = $1
-        AND ($2::uuid IS NULL OR m.tenant_id = $2::uuid)
-        AND m.status = 'active'
-        AND t.status = 'active'
-        AND t.deleted_at IS NULL
-      ORDER BY
-        CASE m.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2
-          WHEN 'agent' THEN 3 WHEN 'editor' THEN 4 ELSE 5 END,
-        m.accepted_at DESC NULLS LAST, m.created_at ASC
-      LIMIT 1`,
-    [user.id, requestedTenantId ?? null]
+    membershipSelect,
+    [user.id, requestedTenantId]
   );
 
-  // A stale or revoked workspace cookie must not lock a user out of other memberships.
+  // If the selected workspace is no longer accessible, fall back to another active membership.
   if (!membership && requestedTenantId) {
     membership = await queryOne<TenantMembership>(
-      `SELECT m.id, m.tenant_id, m.user_id, m.role, m.status, m.invited_by,
-              m.invited_at, m.accepted_at, m.created_at, m.updated_at
-         FROM tenant_memberships m
-         JOIN tenants t ON t.id = m.tenant_id
-        WHERE m.user_id = $1 AND m.status = 'active'
-          AND t.status = 'active' AND t.deleted_at IS NULL
-        ORDER BY CASE m.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2
-          WHEN 'agent' THEN 3 WHEN 'editor' THEN 4 ELSE 5 END,
-          m.accepted_at DESC NULLS LAST, m.created_at ASC
-        LIMIT 1`,
-      [user.id]
+      membershipSelect.replace("AND ($2::uuid IS NULL OR m.tenant_id = $2::uuid)", ""),
+      [user.id, null]
     );
   }
 
   const tenant = membership
     ? await queryOne<Tenant>(
-        `SELECT id, name, slug, status, country, currency, timezone, plan_id,
-                created_at, updated_at, deleted_at
-           FROM tenants
-          WHERE id = $1 AND status = 'active' AND deleted_at IS NULL
+        `${tenantSelect}
+          WHERE id = $1 AND status = 'active'
           LIMIT 1`,
         [membership.tenant_id]
       )
