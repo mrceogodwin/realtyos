@@ -57,7 +57,7 @@ export async function getCurrentAuthContext(): Promise<AuthContext | null> {
   if (!membership && requestedTenantId) {
     membership = await queryOne<TenantMembership>(
       membershipSelect.replace("AND ($2::uuid IS NULL OR m.tenant_id = $2::uuid)", ""),
-      [user.id, null]
+      [user.id]
     );
   }
 
