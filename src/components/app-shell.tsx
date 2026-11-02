@@ -121,7 +121,7 @@ export function AppShell({
             <Link
               key={href}
               href={href}
-              onClick={(e) => {
+              onClick={() => {
                 setMobileMenu(false);
               }}
               className={"nav-item " + (isActive(href) ? "nav-active" : "")}
