@@ -4,14 +4,14 @@ import type { CreateTenantInput } from "./validation";
 
 export async function getTenantById(id: string): Promise<Tenant | null> {
   return queryOne<Tenant>(
-    `SELECT * FROM tenants WHERE id = $1 AND deleted_at IS NULL`,
+    `SELECT id, name, slug, status, plan_key AS plan_id, created_at, updated_at, 'NG'::text AS country, 'NGN'::text AS currency, 'Africa/Lagos'::text AS timezone, NULL::timestamptz AS deleted_at FROM tenants WHERE id = $1`,
     [id]
   );
 }
 
 export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
   return queryOne<Tenant>(
-    `SELECT * FROM tenants WHERE slug = $1 AND deleted_at IS NULL`,
+    `SELECT id, name, slug, status, plan_key AS plan_id, created_at, updated_at, 'NG'::text AS country, 'NGN'::text AS currency, 'Africa/Lagos'::text AS timezone, NULL::timestamptz AS deleted_at FROM tenants WHERE slug = $1`,
     [slug]
   );
 }
@@ -65,7 +65,19 @@ export async function getTenantSettings(
   tenantId: string
 ): Promise<TenantSettings | null> {
   return queryOne<TenantSettings>(
-    `SELECT * FROM tenant_settings WHERE tenant_id = $1`,
+    `SELECT ts.tenant_id,
+            COALESCE(ts.settings->>'contact_email', t.contact_email) AS contact_email,
+            COALESCE(ts.settings->>'contact_phone', t.contact_phone) AS contact_phone,
+            ts.settings->>'address' AS address,
+            ts.settings->>'city' AS city,
+            ts.settings->>'state' AS state,
+            COALESCE(ts.settings->'social_links', '{}'::jsonb) AS social_links,
+            ts.seo_settings->>'title' AS seo_title,
+            ts.seo_settings->>'description' AS seo_description,
+            t.custom_domain, false AS domain_verified,
+            (t.status = 'active') AS published, ts.updated_at
+       FROM tenant_settings ts JOIN tenants t ON t.id = ts.tenant_id
+      WHERE ts.tenant_id = $1`,
     [tenantId]
   );
 }
