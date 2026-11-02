@@ -63,15 +63,29 @@ export async function saveBrandingAction(raw: unknown): Promise<ActionResult> {
       );
       const settings = await client.query(
         `UPDATE tenant_settings SET
-          seo_title = COALESCE($2, seo_title),
-          seo_description = COALESCE($3, seo_description),
-          custom_domain = CASE WHEN $4::text IS DISTINCT FROM custom_domain THEN $4 ELSE custom_domain END,
-          domain_verified = CASE WHEN $4::text IS DISTINCT FROM custom_domain THEN false ELSE domain_verified END,
-          published = COALESCE($5, published),
+          seo_settings = seo_settings || jsonb_strip_nulls(jsonb_build_object(
+            'title', $2, 'description', $3
+          )),
           updated_at = now()
-         WHERE tenant_id = $1 RETURNING *`,
-        [scope.tenant.id, seo_title, seo_description, custom_domain, published]
+         WHERE tenant_id = $1 RETURNING tenant_id, seo_settings, updated_at`,
+        [scope.tenant.id, seo_title, seo_description]
       );
+      if (custom_domain !== undefined) {
+        await client.query(
+          `UPDATE tenants SET custom_domain = $2, updated_at = now()
+            WHERE id = $1`,
+          [scope.tenant.id, custom_domain]
+        );
+      }
+      if (published !== undefined) {
+        await client.query(
+          `UPDATE tenant_settings
+              SET settings = settings || jsonb_build_object('published', $2),
+                  updated_at = now()
+            WHERE tenant_id = $1`,
+          [scope.tenant.id, published]
+        );
+      }
       if (!branding.rowCount || !settings.rowCount) throw new Error("WORKSPACE_BRANDING_NOT_INITIALIZED");
       return { branding: branding.rows[0], settings: settings.rows[0] };
     });
