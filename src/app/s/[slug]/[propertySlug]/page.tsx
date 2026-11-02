@@ -93,7 +93,7 @@ export default async function PublicPropertyDetailPage({ params }: Props) {
           {property && (
             <div className="pub-detail-grid">
               <div>
-                <div className="pub-detail-visual" />
+                <div className="pub-detail-visual">{property.cover_url ? <img src={property.cover_url} alt={property.title} /> : <span>{property.title}</span>}</div>
                 <h1>{property.title}</h1>
                 <div className="pub-card-loc">
                   <MapPin size={14} />
