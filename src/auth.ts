@@ -23,7 +23,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async jwt({ token, account, profile }) {
       if (account?.provider === "google" && profile?.email) {
-        const providerId = `google:${account.providerAccountId}`;
         const row = await queryOne<UserRow>(
           `INSERT INTO user_profiles
              (auth_provider, auth_subject, email, full_name, avatar_url)
