@@ -132,18 +132,17 @@ export async function acceptTeamInvitationAction(rawToken: string): Promise<Team
       }
 
       const tenant = await client.query(
-        "SELECT id FROM tenants WHERE id = $1 AND status = 'active' AND deleted_at IS NULL",
+        "SELECT id FROM tenants WHERE id = $1 AND status = 'active'",
         [invite.tenant_id]
       );
       if (!tenant.rowCount) throw new Error("WORKSPACE_UNAVAILABLE");
 
       const membership = await client.query(
-        `INSERT INTO tenant_memberships (tenant_id, user_id, role, status, invited_by, invited_at, accepted_at)
-         VALUES ($1, $2, $3, 'active', $4, now(), now())
+        `INSERT INTO tenant_memberships (tenant_id, user_id, role, status, invited_by)
+         VALUES ($1, $2, $3, 'active', $4)
          ON CONFLICT (tenant_id, user_id) DO UPDATE
-           SET role = EXCLUDED.role, status = 'active', invited_by = EXCLUDED.invited_by,
-               invited_at = EXCLUDED.invited_at, accepted_at = now(), updated_at = now()
-         WHERE tenant_memberships.status IN ('invited', 'revoked')
+           SET role = EXCLUDED.role, status = 'active', invited_by = EXCLUDED.invited_by
+         WHERE tenant_memberships.status = 'invited'
          RETURNING id`,
         [invite.tenant_id, context.user.id, invite.role, invite.invited_by]
       );
@@ -264,7 +263,7 @@ export async function updateTeamMemberAccessAction(raw: unknown): Promise<TeamAc
       if (member.role === "admin" && scope.membership.role !== "owner") throw new Error("OWNER_REQUIRED");
 
       const result = await client.query<{ id: string; role: string; status: string }>(
-        "UPDATE tenant_memberships SET role = $1, status = $2, updated_at = now() WHERE id = $3 AND tenant_id = $4 RETURNING id, role, status",
+        "UPDATE tenant_memberships SET role = $1, status = $2 WHERE id = $3 AND tenant_id = $4 RETURNING id, role, status",
         [parsed.data.role, parsed.data.status, member.id, scope.tenant.id]
       );
       return result.rows[0];
