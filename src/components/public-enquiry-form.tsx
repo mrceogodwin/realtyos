@@ -49,7 +49,7 @@ export function PublicEnquiryForm({
 
   return (
     <form className="pub-enquiry" onSubmit={onSubmit}>
-      <label className="pub-honeypot" aria-hidden="true">Leave this field empty<input name="website_url" tabIndex={-1} autoComplete="off" /></label>
+      <label className="pub-honeypot" aria-hidden="true" style={{ display: "none" }}>Leave this field empty<input name="website_url" tabIndex={-1} autoComplete="off" /></label>
       <label>
         Full name
         <input name="full_name" required placeholder="Your name" />
