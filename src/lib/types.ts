@@ -95,7 +95,7 @@ export interface UserProfile {
   full_name: string | null;
   avatar_url: string | null;
   phone: string | null;
-  status: "active" | "suspended" | "deleted";
+  status: "active" | "invited" | "disabled";
   platform_role: PlatformRole;
   created_at: string;
   updated_at: string;
